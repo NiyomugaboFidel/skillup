@@ -1,0 +1,60 @@
+{% extends 'auth_base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Login | X{% endblock %}
+
+{% block content %}
+<div class=" max-w-xl w-full mx-auto mt-10 bg-black rounded-lg overflow-hidden shadow-lg">
+    <div class="p-6 w-full border  border-blue-400 rounded-l-xl">
+        <div class="flex justify-center mb-6">
+            <svg viewBox="0 0 24 24" class="w-8 h-8 text-white" fill="currentColor">
+                <g>
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+                </g>
+            </svg>
+        </div>
+        <h2 class="text-xl font-bold text-center mb-8">Sign in to X</h2>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            {% for field in form %}
+                <div class="mb-5">
+                    <label class="block text-gray-400 mb-2">{{ field.label }}</label>
+                    {% if field.name == 'username' %}
+                        {{ field|add_class:"w-full p-3 border border-gray-700 rounded-md bg-black text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none transition-colors" }}
+                    {% elif field.name == 'password' %}
+                        {{ field|add_class:"w-full p-3 border border-gray-700 rounded-md bg-black text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none transition-colors" }}
+                    {% else %}
+                        {{ field|add_class:"w-full p-3 border border-gray-700 rounded-md bg-black text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none transition-colors" }}
+                    {% endif %}
+                    
+                    {% if field.errors %}
+                        <div class="text-red-500 text-sm mt-1">
+                            {% for error in field.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            
+            <div class="mt-6">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-full w-full transition-colors">
+                    Sign in
+                </button>
+            </div>
+        </form>
+        
+        <div class="mt-6 text-center">
+            <a href="#" class="text-blue-400 hover:underline text-sm">Forgot password?</a>
+        </div>
+        
+        <div class="mt-8 pt-6 border-t border-gray-800 text-center">
+            <p class="text-gray-400">
+                Don't have an account? <a href="{% url 'register' %}" class="text-blue-400 hover:underline">Sign up</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

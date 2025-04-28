@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %} 
+
+{% block title %}Create Post | ChatApp{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+<div class="p-4 border-b twitter-border">
+    <h1 class="text-xl font-bold">Create Post</h1>
+</div>
+
+<div class="p-4">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="flex">
+            <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="w-12 h-12 rounded-full mr-4">
+            <div class="flex-1">
+             
+                {% render_field form.content class="w-full p-2 bg-transparent border border-gray-700 rounded-lg focus:outline-none focus:border-blue-400 text-white placeholder-gray-500" placeholder="Tweet your reply" rows="6" %}
+                <div class="flex justify-between items-center mt-4">
+                    <div class="flex items-center text-blue-400">
+                        <label for="id_image" class="cursor-pointer mr-3">
+                            <i class="far fa-image"></i>
+                        </label>
+                        {{ form.image }}
+                        
+                    </div>
+                    <button type="submit" class="twitter-blue hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full">
+                        Tweet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %} 
+
+{% block title %}Conversation | ChatApp{% endblock %}
+
+{% block content %}
+<div class="flex h-screen">
+
+<div class="hidden md:block md:w-1/3 border-r twitter-border">
+    <div class="p-4 border-b twitter-border">
+        <h1 class="text-xl font-bold">Messages</h1>
+    </div>
+    
+    <div class="overflow-y-auto" style="height: calc(100vh - 65px);">
+        {% for t in request.user.threads.all %}
+            {% with other_user=t.participants.exclude.id.filter.first %}
+            <a href="{% url 'thread_detail' thread_id=t.id %}" class="block p-4 border-b twitter-border hover:bg-gray-900 transition duration-200 {% if t.id == thread.id %}bg-gray-800{% endif %}">
+                <div class="flex items-start">
+                    <img src="{{ other_user.profile.avatar.url }}" alt="{{ other_user.username }}" class="w-12 h-12 rounded-full mr-3">
+                    <div>
+                        <div class="flex items-center">
+                            <span class="font-bold">{{ other_user.get_full_name|default:other_user }}</span>
+                            <span class="twitter-text-light ml-1">@{{ other_user.username }}</span>
+                            <span class="twitter-text-light ml-1">·</span>
+                            <span class="twitter-text-light ml-1">{{ t.updated_at|timesince }}</span>
+                        </div>
+                        <div class="mt-1 twitter-text-light">
+                            {{ t.messages.last.content|truncatechars:50 }}
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endwith %}
+        {% empty %}
+            <div class="p-8 text-center twitter-text-light">
+                <p>No messages yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+<div class="w-full md:w-2/3 flex flex-col">
+
+    {% with other_user=thread.participants.exclude.id.filter.first %}
+    <div class="p-4 border-b twitter-border flex items-center">
+        <a href="{% url 'inbox' %}" class="md:hidden mr-4">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <img src="{{ other_user.profile.avatar.url }}" alt="{{ other_user.username }}" class="w-10 h-10 rounded-full mr-3">
+        <div>
+            <div class="font-bold">{{ other_user.get_full_name|default:other_user }}</div>
+            <div class="twitter-text-light text-sm">@{{ other_user.username }}</div>
+        </div>
+    </div>
+    {% endwith %}
+    
+   
+    <div class="flex-1 overflow-y-auto p-4" id="messages-container">
+        {% for message in messages_list %}
+            <div class="mb-4 flex {% if message.sender == request.user %}justify-end{% endif %}">
+                <div class="{% if message.sender == request.user %}bg-blue-500 rounded-l-xl rounded-tr-xl{% else %}bg-gray-700 rounded-r-xl rounded-tl-xl{% endif %} p-3 max-w-xs md:max-w-md">
+                    <div>{{ message.content }}</div>
+                    {% if message.image %}
+                        <div class="mt-2">
+                            <img src="{{ message.image.url }}" alt="Message image" class="rounded-lg max-w-full">
+                        </div>
+                    {% endif %}
+                    <div class="text-xs text-gray-300 mt-1 text-right">{{ message.created_at|time:"g:i A" }}</div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="text-center twitter-text-light my-8">
+                <p>No messages yet. Start the conversation!</p>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <div class="p-4 border-t twitter-border">
+        <form method="post" enctype="multipart/form-data" class="flex items-center">
+            {% csrf_token %}
+            <div class="flex-1 mr-2">
+                {% render_field form.content class="w-full p-2 bg-transparent border border-gray-700 rounded-lg focus:outline-none focus:border-blue-400 text-white placeholder-gray-500" placeholder="Type your message..." %}
+            </div>
+            <div class="flex items-center">
+                <label for="id_image" class="cursor-pointer mr-3 text-blue-400">
+                    <i class="far fa-image"></i>
+                </label>
+                {% render_field form.image class="hidden" id="id_image" %}
+                <button type="submit" class="twitter-blue hover:bg-blue-600 text-white font-bold p-2 rounded-full">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    var messagesContainer = document.getElementById('messages-container');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+});
+</script>
+{% endblock %}

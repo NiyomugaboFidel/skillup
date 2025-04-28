@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ChatApp{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .twitter-blue {
+            background-color: rgb(29, 155, 240);
+        }
+        .twitter-dark {
+            background-color: rgb(21, 32, 43);
+        }
+        .twitter-darker {
+            background-color: rgb(25, 39, 52);
+        }
+        .twitter-border {
+            border-color: rgb(56, 68, 77);
+        }
+        .twitter-text {
+            color: rgb(247, 249, 249);
+        }
+        .twitter-text-light {
+            color: rgb(139, 152, 165);
+        }
+        body {
+            background-color: black;
+        }
+    </style>
+</head>
+<body class="bg-black text-white antialiased">
+    <div class="min-h-screen flex flex-col justify-center">
+        {% if messages %}
+            <div class="mb-4 max-w-md mx-auto">
+                {% for message in messages %}
+                    <div class="p-4 twitter-darker border-l-4 {% if message.tags == 'success' %}border-green-500{% elif message.tags == 'error' %}border-red-500{% else %}border-blue-500{% endif %} rounded-md">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

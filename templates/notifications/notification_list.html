@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications | ChatApp{% endblock %}
+
+{% block content %}
+<div class="border-b twitter-border">
+<div class="p-4 border-b twitter-border">
+    <h1 class="text-xl font-bold">Notifications</h1>
+</div>
+
+
+<div>
+    {% for notification in notifications %}
+        <div class="p-4 border-b twitter-border hover:bg-gray-900 transition duration-200">
+            <div class="flex items-start">
+                <div class="mr-3 mt-1">
+                    {% if notification.notification_type == 'like' %}
+                        <i class="fas fa-heart text-red-500"></i>
+                    {% elif notification.notification_type == 'comment' %}
+                        <i class="fas fa-comment text-blue-500"></i>
+                    {% elif notification.notification_type == 'follow' %}
+                        <i class="fas fa-user-plus text-green-500"></i>
+                    {% elif notification.notification_type == 'retweet' %}
+                        <i class="fas fa-retweet text-green-500"></i>
+                    {% elif notification.notification_type == 'message' %}
+                        <i class="fas fa-envelope text-blue-500"></i>
+                    {% elif notification.notification_type == 'mention' %}
+                        <i class="fas fa-at text-purple-500"></i>
+                    {% endif %}
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center">
+                        <img src="{{ notification.sender.profile.avatar.url }}" alt="{{ notification.sender.username }}" class="w-10 h-10 rounded-full mr-3">
+                        <div>
+                            <a href="{% url 'profile' username=notification.sender.username %}" class="font-bold hover:underline">
+                                {{ notification.sender.get_full_name|default:notification.sender.username }}
+                            </a>
+                            {% if notification.notification_type == 'like' %}
+                                <span>liked your post</span>
+                            {% elif notification.notification_type == 'comment' %}
+                                <span>commented on your post</span>
+                            {% elif notification.notification_type == 'follow' %}
+                                <span>followed you</span>
+                            {% elif notification.notification_type == 'retweet' %}
+                                <span>retweeted your post</span>
+                            {% elif notification.notification_type == 'message' %}
+                                <span>sent you a message</span>
+                            {% elif notification.notification_type == 'mention' %}
+                                <span>mentioned you in a post</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="twitter-text-light text-sm mt-1">
+                        {{ notification.created_at|timesince }} ago
+                    </div>
+                    
+                    {% if notification.content_object and notification.notification_type != 'follow' and notification.notification_type != 'message' %}
+                        <div class="mt-2 ml-12 p-3 twitter-darker rounded-lg">
+                            {% if notification.notification_type == 'like' or notification.notification_type == 'retweet' or notification.notification_type == 'comment' %}
+                                <a href="{% url 'post_detail' pk=notification.object_id %}" class="hover:underline">
+                                    {{ notification.content_object.content|truncatechars:100 }}
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="p-8 text-center twitter-text-light">
+            <p>No notifications yet.</p>
+        </div>
+    {% endfor %}
+</div>
+</div>
+{% endblock %}

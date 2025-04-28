@@ -1,0 +1,70 @@
+{% extends 'auth_base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Register | ChatApp{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen">
+    <div class="flex-1 flex items-center justify-center">
+        <div class="w-full max-w-md px-8 py-10">
+            <div class="flex justify-center mb-8">
+                <i class="fab fa-twitter text-5xl twitter-text"></i>
+            </div>
+            
+            <h1 class="text-3xl font-bold mb-8">Create your account</h1>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                {% for field in form %}
+                    <div class="mb-6">
+                        {% if field.name == 'username' %}
+                            {% render_field field class="w-full p-4 bg-transparent border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500" placeholder="Username" %}
+                        {% elif field.name == 'email' %}
+                            {% render_field field class="w-full p-4 bg-transparent border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500" placeholder="Email" %}
+                        {% elif field.name == 'password1' %}
+                            {% render_field field class="w-full p-4 bg-transparent border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500" placeholder="Password" %}
+                        {% elif field.name == 'password2' %}
+                            {% render_field field class="w-full p-4 bg-transparent border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500" placeholder="Confirm password" %}
+                        {% else %}
+                            <label class="block text-gray-400 mb-2 text-sm">{{ field.label }}</label>
+                            {% render_field field class="w-full p-4 bg-transparent border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500" %}
+                        {% endif %}
+                        
+                        {% if field.errors %}
+                            <div class="text-red-500 text-sm mt-2">
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                
+                <div class="mt-8">
+                    <button type="submit" class="twitter-blue hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-full w-full text-lg transition duration-200">
+                        Sign up
+                    </button>
+                </div>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-gray-400">
+                    Already have an account? 
+                    <a href="{% url 'login' %}" class="text-blue-400 hover:underline font-medium">
+                        Log in
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="hidden lg:block lg:w-1/2 bg-cover bg-center" style="background-image: url('https://abs.twimg.com/sticky/illustrations/lohp_en_1302x955.png')">
+        <div class="h-full flex items-center justify-center bg-black bg-opacity-50">
+            <div class="text-white text-center px-16">
+                <i class="fab fa-twitter text-7xl mb-8"></i>
+                <h2 class="text-5xl font-bold mb-6">Happening now</h2>
+                <p class="text-2xl">Join ChatApp today.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

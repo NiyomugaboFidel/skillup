@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Home | ChatApp{% endblock %}
+
+{% block content %}
+<div class="border-b twitter-border">
+    <div class="p-4 border-b twitter-border">
+        <h1 class="text-xl font-bold">Home</h1>
+    </div>
+    
+    <!-- Create post form -->
+    <div class="p-4 border-b twitter-border">
+        <form method="post" action="{% url 'create_post' %}" enctype="multipart/form-data" class="flex">
+            {% csrf_token %}
+            <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="w-12 h-12 rounded-full mr-4">
+            <div class="flex-1">
+                <textarea name="content" placeholder="What's happening?" class="w-full bg-transparent text-white p-2 focus:outline-none"></textarea>
+                <div class="flex justify-between items-center mt-2">
+                    <div class="flex items-center text-blue-400">
+                        <label for="image-upload" class="cursor-pointer mr-3">
+                            <i class="far fa-image"></i>
+                        </label>
+                        <input id="image-upload" type="file" name="image" class="hidden">
+                    </div>
+                    <button type="submit" class="twitter-blue hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full">
+                        Tweet
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Posts -->
+    <div>
+        {% for post in posts %}
+            {% include 'posts/post_card.html' with post=post %}
+        {% empty %}
+            <div class="p-8 text-center twitter-text-light">
+                <p>No posts yet. Follow more people or create your first post!</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,549 @@
+
+
+# posts/models.py
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('like', 'Like'),
+        ('comment', 'Comment'),
+        ('follow', 'Follow'),
+        ('message', 'Message'),
+        ('retweet', 'Retweet'),
+        ('mention', 'Mention'),
+    )
+    
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
+    
+    # Generic relation to connect any model (Post, Comment, etc.)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.sender.username} {self.notification_type} notification to {self.recipient.username}"
+
+
+
+        # accounts/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.views.generic import DetailView, UpdateView
+from django.urls import reverse_lazy
+from .forms import ProfileUpdateForm, UserUpdateForm
+from .models import Profile
+from notifications.models import Notification
+from django.contrib.contenttypes.models import ContentType
+
+@login_required
+def profile(request, username):
+    user = get_object_or_404(User, username=username)
+    posts = user.posts.all()
+    is_following = False
+    if request.user.is_authenticated:
+        is_following = request.user.profile.following.filter(user=user).exists()
+    
+    context = {
+        'profile_user': user,
+        'posts': posts,
+        'is_following': is_following,
+    }
+    return render(request, 'accounts/profile.html', context)
+
+@login_required
+def update_profile(request):
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=request.user)
+        profile_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+        
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Your profile has been updated!')
+            return redirect('profile', username=request.user.username)
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+        profile_form = ProfileUpdateForm(instance=request.user.profile)
+    
+    context = {
+        'user_form': user_form,
+        'profile_form': profile_form,
+    }
+    return render(request, 'accounts/update_profile.html', context)
+
+@login_required
+def follow_user(request, username):
+    user_to_follow = get_object_or_404(User, username=username)
+    
+    if request.user != user_to_follow:
+        if request.user.profile.following.filter(user=user_to_follow).exists():
+            # Unfollow
+            request.user.profile.following.remove(user_to_follow.profile)
+        else:
+            # Follow
+            request.user.profile.following.add(user_to_follow.profile)
+            
+            # Create notification
+            Notification.objects.create(
+                recipient=user_to_follow,
+                sender=request.user,
+                notification_type='follow'
+            )
+    
+    return redirect('profile', username=username)
+
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            messages.success(request, f'Account created for {username}! You can now log in.')
+            return redirect('login')
+    else:
+        form = UserCreationForm()
+    return render(request, 'accounts/register.html', {'form': form})
+
+# posts/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.generic import ListView, DetailView, CreateView, DeleteView
+from django.urls import reverse_lazy, reverse
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from .models import Post, Comment
+from .forms import PostForm, CommentForm
+from notifications.models import Notification
+from django.contrib.contenttypes.models import ContentType
+
+class HomeView(LoginRequiredMixin, ListView):
+    model = Post
+    template_name = 'posts/home.html'
+    context_object_name = 'posts'
+    
+    def get_queryset(self):
+        # Get posts from users that the current user follows + own posts
+        following_users = self.request.user.profile.following.values_list('user', flat=True)
+        return Post.objects.filter(user__in=list(following_users) + [self.request.user.id])
+
+@login_required
+def create_post(request):
+    if request.method == 'POST':
+        form = PostForm(request.POST, request.FILES)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.user = request.user
+            post.save()
+            messages.success(request, 'Your post has been created!')
+            return redirect('home')
+    else:
+        form = PostForm()
+    
+    return render(request, 'posts/create_post.html', {'form': form})
+
+@login_required
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    comments = post.comments.all()
+    
+    if request.method == 'POST':
+        comment_form = CommentForm(request.POST)
+        if comment_form.is_valid():
+            comment = comment_form.save(commit=False)
+            comment.post = post
+            comment.user = request.user
+            comment.save()
+            
+            # Create notification for post owner
+            if post.user != request.user:
+                Notification.objects.create(
+                    recipient=post.user,
+                    sender=request.user,
+                    notification_type='comment',
+                    content_type=ContentType.objects.get_for_model(post),
+                    object_id=post.id
+                )
+            
+            messages.success(request, 'Your comment has been added!')
+            return redirect('post_detail', pk=post.pk)
+    else:
+        comment_form = CommentForm()
+    
+    context = {
+        'post': post,
+        'comments': comments,
+        'comment_form': comment_form,
+    }
+    return render(request, 'posts/post_detail.html', context)
+
+@login_required
+def like_post(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    
+    if post.likes.filter(id=request.user.id).exists():
+        post.likes.remove(request.user)
+        liked = False
+    else:
+        post.likes.add(request.user)
+        liked = True
+        
+        # Create notification
+        if post.user != request.user:
+            Notification.objects.create(
+                recipient=post.user,
+                sender=request.user,
+                notification_type='like',
+                content_type=ContentType.objects.get_for_model(post),
+                object_id=post.id
+            )
+    
+    if request.is_ajax():
+        return JsonResponse({'liked': liked, 'count': post.like_count})
+    return redirect('post_detail', pk=post.pk)
+
+@login_required
+def retweet_post(request, pk):
+    original_post = get_object_or_404(Post, pk=pk)
+    
+    # Check if user already retweeted this post
+    if original_post.retweets.filter(id=request.user.id).exists():
+        # Find and delete the retweet
+        retweet = Post.objects.filter(
+            user=request.user,
+            parent=original_post
+        ).first()
+        if retweet:
+            retweet.delete()
+        original_post.retweets.remove(request.user)
+        retweeted = False
+    else:
+        # Create a new retweet
+        retweet = Post(
+            user=request.user,
+            content=original_post.content,
+            parent=original_post
+        )
+        retweet.save()
+        original_post.retweets.add(request.user)
+        retweeted = True
+        
+        # Create notification
+        if original_post.user != request.user:
+            Notification.objects.create(
+                recipient=original_post.user,
+                sender=request.user,
+                notification_type='retweet',
+                content_type=ContentType.objects.get_for_model(original_post),
+                object_id=original_post.id
+            )
+    
+    if request.is_ajax():
+        return JsonResponse({'retweeted': retweeted, 'count': original_post.retweet_count})
+    return redirect('home')
+
+class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Post
+    success_url = reverse_lazy('home')
+    
+    def test_func(self):
+        post = self.get_object()
+        return self.request.user == post.user
+
+# messages/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.db.models import Q
+from .models import Thread, DirectMessage
+from .forms import MessageForm
+from notifications.models import Notification
+
+@login_required
+def inbox(request):
+    threads = Thread.objects.filter(participants=request.user)
+    return render(request, 'messages/inbox.html', {'threads': threads})
+
+@login_required
+def thread_detail(request, thread_id):
+    thread = get_object_or_404(Thread, id=thread_id, participants=request.user)
+    messages_list = thread.messages.all()
+    
+    # Mark messages as read
+    unread_messages = messages_list.exclude(sender=request.user).exclude(read_by=request.user)
+    for message in unread_messages:
+        message.read_by.add(request.user)
+    
+    if request.method == 'POST':
+        form = MessageForm(request.POST, request.FILES)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.thread = thread
+            message.sender = request.user
+            message.save()
+            
+            # Create notification for all participants except sender
+            for participant in thread.participants.exclude(id=request.user.id):
+                Notification.objects.create(
+                    recipient=participant,
+                    sender=request.user,
+                    notification_type='message',
+                    content_type=ContentType.objects.get_for_model(thread),
+                    object_id=thread.id
+                )
+            
+            thread.save()  # Updates updated_at timestamp
+            return redirect('thread_detail', thread_id=thread.id)
+    else:
+        form = MessageForm()
+    
+    context = {
+        'thread': thread,
+        'messages_list': messages_list,
+        'form': form,
+    }
+    return render(request, 'messages/thread_detail.html', context)
+
+@login_required
+def start_thread(request, username):
+    recipient = get_object_or_404(User, username=username)
+    
+    # Check if thread already exists
+    threads = Thread.objects.filter(participants=request.user).filter(participants=recipient)
+    if threads.exists():
+        return redirect('thread_detail', thread_id=threads.first().id)
+    
+    # Create new thread
+    if request.method == 'POST':
+        form = MessageForm(request.POST, request.FILES)
+        if form.is_valid():
+            thread = Thread.objects.create()
+            thread.participants.add(request.user, recipient)
+            
+            message = form.save(commit=False)
+            message.thread = thread
+            message.sender = request.user
+            message.save()
+            
+            # Create notification
+            Notification.objects.create(
+                recipient=recipient,
+                sender=request.user,
+                notification_type='message',
+                content_type=ContentType.objects.get_for_model(thread),
+                object_id=thread.id
+            )
+            
+            return redirect('thread_detail', thread_id=thread.id)
+    else:
+        form = MessageForm()
+    
+    context = {
+        'form': form,
+        'recipient': recipient,
+    }
+    return render(request, 'messages/start_thread.html', context)
+
+# notifications/views.py
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Notification
+
+@login_required
+def notification_list(request):
+    notifications = Notification.objects.filter(recipient=request.user)
+    
+    # Mark all as read
+    unread_notifications = notifications.filter(read=False)
+    unread_notifications.update(read=True)
+    
+    return render(request, 'notifications/notification_list.html', {'notifications': notifications})
+
+# notifications/context_processors.py
+def notification_count(request):
+    count = 0
+    if request.user.is_authenticated:
+        count = Notification.objects.filter(recipient=request.user, read=False).count()
+    return {'notification_count': count}
+
+# Main URLs
+# chatapp/urls.py
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from posts.views import HomeView
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', HomeView.as_view(), name='home'),
+    path('accounts/', include('accounts.urls')),
+    path('posts/', include('posts.urls')),
+    path('messages/', include('messages.urls')),
+    path('notifications/', include('notifications.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# accounts/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('register/', views.register, name='register'),
+    path('profile/<str:username>/', views.profile, name='profile'),
+    path('profile/update/', views.update_profile, name='update_profile'),
+    path('follow/<str:username>/', views.follow_user, name='follow_user'),
+]
+
+# posts/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('new/', views.create_post, name='create_post'),
+    path('<int:pk>/', views.post_detail, name='post_detail'),
+    path('<int:pk>/like/', views.like_post, name='like_post'),
+    path('<int:pk>/retweet/', views.retweet_post, name='retweet_post'),
+    path('<int:pk>/delete/', views.PostDeleteView.as_view(), name='post_delete'),
+]
+
+# messages/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.inbox, name='inbox'),
+    path('<int:thread_id>/', views.thread_detail, name='thread_detail'),
+    path('new/<str:username>/', views.start_thread, name='start_thread'),
+]
+
+# notifications/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.notification_list, name='notifications'),
+]
+
+
+
+# accounts/forms.py
+from django import forms
+from django.contrib.auth.models import User
+from .models import Profile
+
+class UserUpdateForm(forms.ModelForm):
+    email = forms.EmailField()
+    
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name']
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['bio', 'location', 'birth_date', 'avatar', 'cover_image', 'website']
+        widgets = {
+            'birth_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+# posts/forms.py
+from django import forms
+from .models import Post, Comment
+
+class PostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ['content', 'image']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300',
+                'placeholder': "What's happening?",
+                'rows': 3,
+            }),
+        }
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300',
+                'placeholder': 'Add a comment...',
+                'rows': 2,
+            }),
+        }
+
+# messages/forms.py
+from django import forms
+from .models import DirectMessage
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = DirectMessage
+        fields = ['content', 'image']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300',
+                'placeholder': 'Type your message...',
+                'rows': 2,
+            }),
+        }
+
+
+
+        {% extends 'base.html' %}
+
+{% block title %}Home | ChatApp{% endblock %}
+
+{% block content %}
+<div class="border-b twitter-border">
+    <div class="p-4 border-b twitter-border">
+        <h1 class="text-xl font-bold">Home</h1>
+    </div>
+    
+    <!-- Create post form -->
+    <div class="p-4 border-b twitter-border">
+        <form method="post" action="{% url 'create_post' %}" enctype="multipart/form-data" class="flex">
+            {% csrf_token %}
+            <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="w-12 h-12 rounded-full mr-4">
+            <div class="flex-1">
+                <textarea name="content" placeholder="What's happening?" class="w-full bg-transparent text-white p-2 focus:outline-none"></textarea>
+                <div class="flex justify-between items-center mt-2">
+                    <div class="flex items-center text-blue-400">
+                        <label for="image-upload" class="cursor-pointer mr-3">
+                            <i class="far fa-image"></i>
+                        </label>
+                        <input id="image-upload" type="file" name="image" class="hidden">
+                    </div>
+                    <button type="submit" class="twitter-blue hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full">
+                        Tweet
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Posts -->
+    <div>
+        {% for post in posts %}
+            {% include 'posts/post_card.html' with post=post %}
+        {% empty %}
+            <div class="p-8 text-center twitter-text-light">
+                <p>No posts yet. Follow more people or create your first post!</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
