@@ -37,3 +37,43 @@
 </div>
 </div>
 {% endblock %}
+
+{% extends 'base.html' %}
+
+{% block title %}New Message | ChatApp{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+<div class="p-4 border-b twitter-border">
+    <h1 class="text-xl font-bold">New Message</h1>
+</div>
+
+<div class="p-4">
+    <div class="flex items-center mb-4">
+        <img src="{{ recipient.profile.avatar.url }}" alt="{{ recipient.username }}" class="w-12 h-12 rounded-full mr-3">
+        <div>
+            <div class="font-bold">{{ recipient.get_full_name|default:recipient.username }}</div>
+            <div class="twitter-text-light">@{{ recipient.username }}</div>
+        </div>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-4">
+            {{ form.content }}
+        </div>
+        <div class="flex items-center justify-between">
+            <div>
+                <label for="id_image" class="cursor-pointer text-blue-400">
+                    <i class="far fa-image"></i>
+                </label>
+                {{ form.image }}
+            </div>
+            <button type="submit" class="twitter-blue hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full">
+                Send
+            </button>
+        </div>
+    </form>
+</div>
+</div>
+{% endblock %}

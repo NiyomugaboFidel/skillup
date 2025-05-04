@@ -27,6 +27,9 @@ INSTALLED_APPS = [
     'chats',
     'posts',
     'notifications',
+    'courses',
+    'channels',
+    'channels_redis',
 ]
 
 MIDDLEWARE = [
@@ -52,7 +55,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                # 'notifications.context_processors.notification_count',  # Custom context processor
+                 'notifications.views.notification_count',
             ],
         },
     },
@@ -105,3 +108,15 @@ LOGOUT_REDIRECT_URL = 'login'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 CRISPY_TEMPLATE_PACK = "tailwind"
 
+# Configure ASGI application
+ASGI_APPLICATION = 'chatapp.asgi.application'
+
+# Channel layers configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}

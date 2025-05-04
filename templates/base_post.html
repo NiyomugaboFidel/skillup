@@ -1,0 +1,155 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ChatApp{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.10.5/cdn.alpine.min.js" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+
+    <style>
+          body {
+             font-family: 'Roboto', sans-serif;
+             }
+        .twitter-blue {
+            background-color: rgb(29, 155, 240);
+        }
+        .twitter-dark {
+            background-color: rgb(21, 32, 43);
+        }
+        .twitter-darker {
+            background-color: rgb(25, 39, 52);
+        }
+        .twitter-border {
+            border-color: rgb(56, 68, 77);
+        }
+        .twitter-text {
+            color: rgb(247, 249, 249);
+        }
+        .twitter-text-light {
+            color: rgb(139, 152, 165);
+        }
+    </style>
+</head>
+<body class="bg-black text-white antialiased">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 fixed h-full twitter-dark border-r twitter-border hidden md:block">
+            <div class="p-4">
+                <a href="{% url 'home' %}" class="text-xl font-bold flex items-center mb-6">
+                    <i class="fab fa-twitter text-2xl twitter-text mr-2"></i>
+                    <span>QT</span>
+                </a>
+                <nav>
+                    <ul>
+                        <li class="mb-4">
+                            <a href="{% url 'home' %}" class="flex items-center hover:bg-gray-800 p-2 rounded-full">
+                                <i class="fas fa-home text-xl mr-4"></i>
+                                <span class="font-bold">Home</span>
+                            </a>
+                        </li>
+                        <li class="mb-4">
+                            <a href="{% url 'profile' username=user.username %}" class="flex items-center hover:bg-gray-800 p-2 rounded-full">
+                                <i class="fas fa-user text-xl mr-4"></i>
+                                <span class="font-bold">Profile</span>
+
+
+                            </a>
+                        </li>
+                        <li class="mb-4">
+                            <a href="{% url 'notifications' %}" class="flex items-center hover:bg-gray-800 p-2 rounded-full">
+                                <i class="fas fa-bell text-xl mr-4"></i>
+                                <span class="font-bold">Notifications</span>
+                                {% if notification_count > 0 %}
+                                    <span class="ml-2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs">
+                                        {{ notification_count }}
+                                    </span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="mb-4">
+                            <a href="{% url 'inbox' %}" class="flex items-center hover:bg-gray-800 p-2 rounded-full">
+                                <i class="fas fa-envelope text-xl mr-4"></i>
+                                <span class="font-bold">Messages</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="mt-6">
+                    <a href="{% url 'create_post' %}" class="twitter-blue hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full w-full block text-center">
+                        Tweet
+                    </a>
+                </div>
+                <div class="mt-6">
+                    <a href="{% url 'login' %}" class="twitter-blue bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full w-full block text-center">
+                        Logout
+                    </a>
+                </div>
+            </div>
+            
+          
+            <div class="absolute bottom-4 left-0 right-0 px-4">
+                <div class="flex items-center p-2 hover:bg-gray-800 rounded-full cursor-pointer">
+                    <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="w-10 h-10 rounded-full mr-2">
+                    <div>
+                        <div class="font-bold">{{ user.get_full_name|default:user.username }}</div>
+                        <div class="text-gray-500">@{{ user.username }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+      
+        <div class="ml-0 md:ml-64 flex-1">
+          
+            <div class="md:hidden flex items-center justify-between p-4 twitter-dark border-b twitter-border">
+                <div class="flex items-center">
+                    <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="w-8 h-8 rounded-full mr-2">
+                    <i class="fab fa-twitter text-2xl twitter-text"></i>
+                </div>
+                <div x-data="{ open: false }">
+                    <button @click="open = !open" class="focus:outline-none">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 twitter-darker rounded-md shadow-lg py-1 z-10">
+                        <a href="{% url 'home' %}" class="block px-4 py-2 hover:bg-gray-800">Home</a>
+                        <a href="{% url 'profile' username=user.username %}" class="block px-4 py-2 hover:bg-gray-800">Profile</a>
+                        <a href="{% url 'notifications' %}" class="block px-4 py-2 hover:bg-gray-800">
+                            Notifications
+                            {% if notification_count > 0 %}
+                                <span class="ml-2 bg-red-500 text-white rounded-full h-5 w-5 inline-flex items-center justify-center text-xs">
+                                    {{ notification_count }}
+                                </span>
+                            {% endif %}
+                        </a>
+                        <a href="{% url 'inbox' %}" class="block px-4 py-2 hover:bg-gray-800">Messages</a>
+                        <a href="{% url 'create_post' %}" class="block px-4 py-2 hover:bg-gray-800">Tweet</a>
+                        <a href="{% url 'logout' %}" class="block px-4 py-2 hover:bg-gray-800">Logout</a>
+                    </div>
+                </div>
+            </div>
+
+        
+            <div class="mx-auto max-w-4xl">
+                {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                            <div class="p-4 twitter-darker border-l-4 {% if message.tags == 'success' %}border-green-500{% elif message.tags == 'error' %}border-red-500{% else %}border-blue-500{% endif %} rounded-md">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    <script src="{% static 'js/notifications.js' %}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -3,10 +3,15 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from posts.views import HomeView
+from courses.views import IndexView
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', HomeView.as_view(), name='home'),
+  path('', IndexView.as_view(), name='index'),
+
+    path('/comunity', HomeView.as_view(), name='home'),
+    path('courses/', include('courses.urls')),
     path('accounts/', include('accounts.urls')),
     path('posts/', include('posts.urls')),
     path('messages/', include('chats.urls')),

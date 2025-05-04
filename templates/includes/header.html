@@ -1,0 +1,82 @@
+{% load static %}
+
+<header class="bg-white shadow-md py-4 sticky top-0 z-50 transition-all duration-300" id="main-header">
+    <div class="container mx-auto px-4 flex flex-wrap justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'home' %}" class="flex items-center">
+                <img src="{% static 'images/logo.jpeg' %}" alt="SkillUp Logo" class="h-[60px] w-[60px] ">
+            </a>
+            <div class="hidden md:block relative" id="desktop-course-dropdown">
+                <button id="desktop-course-btn" class="flex items-center space-x-1 border border-gray-300 rounded px-4 py-2 hover:bg-primary-light transition-colors duration-300">
+                    <span>Courses</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div id="desktop-course-menu" class="hidden absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-2 z-50">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-light hover:text-primary">Web Development</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-light hover:text-primary">Data Science</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-light hover:text-primary">Mobile Development</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-light hover:text-primary">AI & Machine Learning</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-light hover:text-primary">View All</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 mx-4 hidden md:block">
+            <form action="{% url 'home' %}" method="GET" class="relative">
+                <input type="text" name="search" placeholder="Search for courses..." class="outline-none w-full border border-gray-300 rounded-full py-2 px-4 pl-4 pr-10 focus:border-primary transition-colors duration-300">
+                <button type="submit" class="absolute w-[80px] h-[42px] right-0 top-1/2 transform -translate-y-1/2 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors duration-300">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+        
+        <div class="hidden md:flex items-center space-x-6">
+            <a href="#" class="text-gray-600 hover:text-primary transition-colors duration-300">Certifications</a>
+            <a href="#" class="text-gray-600 hover:text-primary transition-colors duration-300">AI Learning</a>
+            <a href="{% url 'login' %}" class="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-primary-dark transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">Log In</a>
+            <a href="{% url 'register' %}" class="bg-primary text-white px-4 py-2 rounded-full hover:bg-primary-dark transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">Sign Up Free</a>
+        </div>
+        
+        <!-- Mobile menu button -->
+        <div class="md:hidden">
+            <button id="mobile-menu-btn" class="text-gray-600 focus:outline-none">
+                <svg id="menu-open-icon" class="h-6 w-6" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
+                    <path d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+                <svg id="menu-close-icon" class="h-6 w-6 hidden" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor">
+                    <path d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            
+            <!-- Mobile menu -->
+            <div id="mobile-menu" class="hidden absolute top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-lg py-2 z-50">
+                <form action="{% url 'home' %}" method="GET" class="px-4 py-2">
+                    <div class="relative">
+                        <input type="text" name="search" placeholder="Search for courses..." class="outline-none w-full border border-gray-300 rounded-full py-2 px-4 pl-4 pr-10">
+                        <button type="submit" class="absolute w-[50px] h-[38px] right-0 top-1/2 transform -translate-y-1/2 bg-primary text-white rounded-full">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="px-4 py-2 border-t border-gray-100">
+                    <button id="mobile-course-btn" class="flex items-center justify-between w-full text-left py-2">
+                        <span>Courses</span>
+                        <i id="mobile-course-icon" class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div id="mobile-course-menu" class="hidden pl-4 mt-1">
+                        <a href="#" class="block py-1 text-sm text-gray-700 hover:text-primary">Web Development</a>
+                        <a href="#" class="block py-1 text-sm text-gray-700 hover:text-primary">Data Science</a>
+                        <a href="#" class="block py-1 text-sm text-gray-700 hover:text-primary">Mobile Development</a>
+                        <a href="#" class="block py-1 text-sm text-gray-700 hover:text-primary">AI & Machine Learning</a>
+                        <a href="#" class="block py-1 text-sm text-gray-700 hover:text-primary">View All</a>
+                    </div>
+                </div>
+                <a href="#" class="block px-4 py-2 text-gray-600 hover:bg-primary-light hover:text-primary">Certifications</a>
+                <a href="#" class="block px-4 py-2 text-gray-600 hover:bg-primary-light hover:text-primary">AI Learning</a>
+                <a href="{% url 'login' %}" class="block px-4 py-2 text-gray-600 hover:bg-primary-light hover:text-primary">Log In</a>
+                <a href="{% url 'register' %}" class="block px-4 py-2 bg-primary-light text-primary font-medium">Sign Up Free</a>
+            </div>
+        </div>
+    </div>
+</header>
+

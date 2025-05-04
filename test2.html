@@ -1,0 +1,2254 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+from django.urls import reverse
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+# Course Management Models
+class Course(models.Model):
+    STATUS_CHOICES = (
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    )
+    
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='courses_created')
+    overview = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
+    thumbnail = models.ImageField(upload_to='courses/thumbnails/', blank=True, null=True)
+    students = models.ManyToManyField(User, related_name='courses_enrolled', blank=True, through='Enrollment')
+    duration = models.PositiveIntegerField(help_text="Duration in minutes")
+    
+    class Meta:
+        ordering = ['-created']
+        
+    def __str__(self):
+        return self.title
+    
+    def get_absolute_url(self):
+        return reverse('course_detail', args=[self.slug])
+    
+    @property
+    def lesson_count(self):
+        return self.lessons.count()
+    
+    @property
+    def enrollment_count(self):
+        return self.students.count()
+
+
+class Lesson(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='lessons')
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200)
+    overview = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order']
+        unique_together = ['course', 'slug']
+        
+    def __str__(self):
+        return f"{self.course.title} - {self.title}"
+    
+    def get_absolute_url(self):
+        return reverse('lesson_detail', args=[self.course.slug, self.slug])
+
+
+class ContentBlock(models.Model):
+    TYPE_CHOICES = (
+        ('video', 'Video'),
+        ('text', 'Text/Notes'),
+        ('pdf', 'PDF Document'),
+    )
+    
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='contents')
+    title = models.CharField(max_length=200)
+    content_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    content = models.TextField(blank=True, help_text="For text content or video embed code")
+    file = models.FileField(upload_to='lesson_content/', blank=True, null=True)
+    order = models.PositiveIntegerField(default=0)
+    created = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['order']
+        
+    def __str__(self):
+        return f"{self.lesson.title} - {self.title} ({self.get_content_type_display()})"
+
+
+# Enrollment and Progress Tracking
+class Enrollment(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollments')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+    completed = models.BooleanField(default=False)
+    last_accessed = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['student', 'course']
+        
+    def __str__(self):
+        return f"{self.student.username} enrolled in {self.course.title}"
+    
+    @property
+    def progress_percentage(self):
+        total_lessons = self.course.lessons.count()
+        if total_lessons == 0:
+            return 0
+        completed_lessons = self.progress.filter(completed=True).count()
+        return (completed_lessons / total_lessons) * 100
+
+
+class Progress(models.Model):
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='progress')
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
+    completed = models.BooleanField(default=False)
+    last_accessed = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['enrollment', 'lesson']
+        
+    def __str__(self):
+        return f"Progress for {self.enrollment.student.username} in {self.lesson.title}"
+
+
+# Quiz System
+class Quiz(models.Model):
+    lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='quiz')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    time_limit = models.PositiveIntegerField(null=True, blank=True, help_text="Time limit in minutes")
+    pass_mark = models.PositiveIntegerField(default=70, validators=[MinValueValidator(0), MaxValueValidator(100)], 
+                                        help_text="Percentage required to pass")
+    created = models.DateTimeField(auto_now_add=True)
+    is_ai_generated = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Quiz for {self.lesson.title}"
+    
+    @property
+    def question_count(self):
+        return self.questions.count()
+
+
+class Question(models.Model):
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
+    text = models.TextField()
+    explanation = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+    
+    class Meta:
+        ordering = ['order']
+        
+    def __str__(self):
+        return f"Question {self.order} for {self.quiz.title}"
+
+
+class Answer(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
+    text = models.CharField(max_length=255)
+    is_correct = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Answer for {self.question}"
+
+
+class QuizAttempt(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quiz_attempts')
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='attempts')
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    score = models.PositiveIntegerField(default=0)
+    passed = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.student.username}'s attempt at {self.quiz.title}"
+    
+    @property
+    def duration(self):
+        if self.completed_at:
+            return (self.completed_at - self.started_at).total_seconds() // 60
+        return None
+
+
+class QuizAnswer(models.Model):
+    attempt = models.ForeignKey(QuizAttempt, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    answer = models.ForeignKey(Answer, on_delete=models.CASCADE)
+    is_correct = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Answer to question {self.question.order} in {self.attempt}"
+
+
+# Certificate System
+class Certificate(models.Model):
+    enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE)
+    issued_date = models.DateTimeField(auto_now_add=True)
+    certificate_id = models.CharField(max_length=50, unique=True)
+    pdf_file = models.FileField(upload_to='certificates/', blank=True, null=True)
+    
+    def __str__(self):
+        return f"Certificate for {self.enrollment.student.username} - {self.enrollment.course.title}"
+
+
+# AI Integration
+class AIQuizLog(models.Model):
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='ai_logs')
+    content_used = models.TextField(help_text="Content sent to AI for quiz generation")
+    prompt = models.TextField()
+    result = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"AI Log for {self.quiz.title} at {self.created_at}"
+
+
+# Real-time Communication
+class ChatRoom(models.Model):
+    ROOM_TYPES = (
+        ('course', 'Course Chat'),
+        ('lesson', 'Lesson Discussion'),
+        ('office', 'Office Hours'),
+    )
+    
+    name = models.CharField(max_length=100)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='chat_rooms')
+    room_type = models.CharField(max_length=10, choices=ROOM_TYPES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.get_room_type_display()} for {self.course.title}"
+
+
+class ChatMessage(models.Model):
+    room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='messages')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['timestamp']
+        
+    def __str__(self):
+        return f"Message from {self.user.username} at {self.timestamp}"
+
+
+# Video Call Sessions
+class VideoSession(models.Model):
+    SESSION_TYPES = (
+        ('office', 'Office Hours'),
+        ('lecture', 'Live Lecture'),
+        ('group', 'Group Study'),
+    )
+    
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='video_sessions')
+    title = models.CharField(max_length=200)
+    host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='hosted_sessions')
+    session_type = models.CharField(max_length=10, choices=SESSION_TYPES)
+    scheduled_time = models.DateTimeField()
+    duration = models.PositiveIntegerField(help_text="Duration in minutes")
+    session_id = models.CharField(max_length=100, blank=True)
+    meeting_link = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.title} on {self.scheduled_time.strftime('%Y-%m-%d %H:%M')}"
+    
+    @property
+    def is_active(self):
+        now = timezone.now()
+        return self.scheduled_time <= now <= (self.scheduled_time + timezone.timedelta(minutes=self.duration))
+
+
+class SessionAttendee(models.Model):
+    session = models.ForeignKey(VideoSession, on_delete=models.CASCADE, related_name='attendees')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attended_sessions')
+    joined_at = models.DateTimeField(null=True, blank=True)
+    left_at = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.user.username} in {self.session.title}"
+    
+    @property
+    def attendance_duration(self):
+        if self.joined_at and self.left_at:
+            return (self.left_at - self.joined_at).total_seconds() // 60
+        return None
+
+
+        from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from django.db.models import Count
+from .models import (
+    Profile, Course, Lesson, ContentBlock, Enrollment, Progress,
+    Quiz, Question, Answer, QuizAttempt, QuizAnswer, Certificate,
+    AIQuizLog, ChatRoom, ChatMessage, VideoSession, SessionAttendee
+)
+
+# Profile Admin
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'location', 'follower_count', 'following_count']
+    search_fields = ['user__username', 'user__email', 'location']
+    list_filter = ['location']
+    readonly_fields = ['follower_count', 'following_count']
+    
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.annotate(
+            _follower_count=Count('followers', distinct=True),
+            _following_count=Count('following', distinct=True)
+        )
+        return queryset
+    
+    def follower_count(self, obj):
+        return obj._follower_count if hasattr(obj, '_follower_count') else obj.follower_count
+    
+    def following_count(self, obj):
+        return obj._following_count if hasattr(obj, '_following_count') else obj.following_count
+    
+    follower_count.admin_order_field = '_follower_count'
+    following_count.admin_order_field = '_following_count'
+
+
+# Course Management
+class LessonInline(admin.TabularInline):
+    model = Lesson
+    extra = 1
+    prepopulated_fields = {'slug': ('title',)}
+    show_change_link = True
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ['title', 'instructor', 'status', 'created', 'student_count', 'lesson_count']
+    list_filter = ['status', 'created', 'instructor']
+    search_fields = ['title', 'overview', 'instructor__username']
+    prepopulated_fields = {'slug': ('title',)}
+    date_hierarchy = 'created'
+    inlines = [LessonInline]
+    
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.annotate(
+            _student_count=Count('students', distinct=True),
+            _lesson_count=Count('lessons', distinct=True)
+        )
+        return queryset
+    
+    def student_count(self, obj):
+        return obj._student_count if hasattr(obj, '_student_count') else obj.students.count()
+    
+    def lesson_count(self, obj):
+        return obj._lesson_count if hasattr(obj, '_lesson_count') else obj.lessons.count()
+    
+    student_count.admin_order_field = '_student_count'
+    lesson_count.admin_order_field = '_lesson_count'
+
+
+class ContentBlockInline(admin.StackedInline):
+    model = ContentBlock
+    extra = 1
+    fields = ['title', 'content_type', 'content', 'file', 'order']
+
+
+@admin.register(Lesson)
+class LessonAdmin(admin.ModelAdmin):
+    list_display = ['title', 'course', 'order', 'has_quiz']
+    list_filter = ['course', 'created']
+    search_fields = ['title', 'overview', 'course__title']
+    inlines = [ContentBlockInline]
+    
+    def has_quiz(self, obj):
+        try:
+            return bool(obj.quiz)
+        except:
+            return False
+    
+    has_quiz.boolean = True
+
+
+@admin.register(ContentBlock)
+class ContentBlockAdmin(admin.ModelAdmin):
+    list_display = ['title', 'lesson', 'content_type', 'order']
+    list_filter = ['content_type', 'created']
+    search_fields = ['title', 'content', 'lesson__title']
+
+
+# Enrollment and Progress
+class ProgressInline(admin.TabularInline):
+    model = Progress
+    extra = 0
+    fields = ['lesson', 'completed', 'last_accessed']
+    readonly_fields = ['last_accessed']
+
+
+@admin.register(Enrollment)
+class EnrollmentAdmin(admin.ModelAdmin):
+    list_display = ['student', 'course', 'enrolled_at', 'completed', 'progress_percentage', 'has_certificate']
+    list_filter = ['completed', 'enrolled_at']
+    search_fields = ['student__username', 'course__title']
+    inlines = [ProgressInline]
+    
+    def progress_percentage(self, obj):
+        percentage = obj.progress_percentage
+        return f"{percentage:.1f}%"
+    
+    def has_certificate(self, obj):
+        try:
+            return bool(obj.certificate)
+        except:
+            return False
+    
+    has_certificate.boolean = True
+
+
+@admin.register(Progress)
+class ProgressAdmin(admin.ModelAdmin):
+    list_display = ['student', 'course', 'lesson', 'completed', 'last_accessed']
+    list_filter = ['completed', 'last_accessed']
+    search_fields = ['enrollment__student__username', 'lesson__title']
+    
+    def student(self, obj):
+        return obj.enrollment.student
+    
+    def course(self, obj):
+        return obj.enrollment.course
+
+
+# Quiz System
+class QuestionInline(admin.StackedInline):
+    model = Question
+    extra = 1
+    show_change_link = True
+
+
+@admin.register(Quiz)
+class QuizAdmin(admin.ModelAdmin):
+    list_display = ['title', 'lesson', 'question_count', 'pass_mark', 'is_ai_generated']
+    list_filter = ['is_ai_generated', 'created']
+    search_fields = ['title', 'lesson__title']
+    inlines = [QuestionInline]
+
+
+class AnswerInline(admin.TabularInline):
+    model = Answer
+    extra = 2
+    fields = ['text', 'is_correct']
+
+
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ['short_text', 'quiz', 'order', 'answer_count']
+    list_filter = ['quiz']
+    search_fields = ['text', 'quiz__title']
+    inlines = [AnswerInline]
+    
+    def short_text(self, obj):
+        if len(obj.text) > 50:
+            return f"{obj.text[:50]}..."
+        return obj.text
+    
+    def answer_count(self, obj):
+        return obj.answers.count()
+
+
+class QuizAnswerInline(admin.TabularInline):
+    model = QuizAnswer
+    extra = 0
+    fields = ['question', 'answer', 'is_correct']
+    readonly_fields = ['question', 'answer', 'is_correct']
+
+
+@admin.register(QuizAttempt)
+class QuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ['student', 'quiz', 'started_at', 'completed_at', 'score', 'passed', 'duration']
+    list_filter = ['passed', 'started_at']
+    search_fields = ['student__username', 'quiz__title']
+    inlines = [QuizAnswerInline]
+    readonly_fields = ['duration']
+
+
+# Certificate
+@admin.register(Certificate)
+class CertificateAdmin(admin.ModelAdmin):
+    list_display = ['certificate_id', 'student', 'course', 'issued_date', 'pdf_link']
+    list_filter = ['issued_date']
+    search_fields = ['certificate_id', 'enrollment__student__username', 'enrollment__course__title']
+    readonly_fields = ['pdf_link']
+    
+    def student(self, obj):
+        return obj.enrollment.student
+    
+    def course(self, obj):
+        return obj.enrollment.course
+    
+    def pdf_link(self, obj):
+        if obj.pdf_file:
+            return format_html('<a href="{}" target="_blank">View Certificate</a>', obj.pdf_file.url)
+        return "No PDF available"
+
+
+# AI Integration
+@admin.register(AIQuizLog)
+class AIQuizLogAdmin(admin.ModelAdmin):
+    list_display = ['quiz', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['quiz__title', 'content_used', 'prompt']
+    readonly_fields = ['content_used', 'prompt', 'result']
+
+
+# Chat System
+class ChatMessageInline(admin.TabularInline):
+    model = ChatMessage
+    extra = 0
+    fields = ['user', 'content', 'timestamp']
+    readonly_fields = ['timestamp']
+
+
+@admin.register(ChatRoom)
+class ChatRoomAdmin(admin.ModelAdmin):
+    list_display = ['name', 'course', 'room_type', 'created_at', 'message_count']
+    list_filter = ['room_type', 'created_at']
+    search_fields = ['name', 'course__title']
+    inlines = [ChatMessageInline]
+    
+    def message_count(self, obj):
+        return obj.messages.count()
+
+
+@admin.register(ChatMessage)
+class ChatMessageAdmin(admin.ModelAdmin):
+    list_display = ['short_content', 'user', 'room', 'timestamp']
+    list_filter = ['timestamp', 'room__room_type']
+    search_fields = ['content', 'user__username', 'room__name']
+    
+    def short_content(self, obj):
+        if len(obj.content) > 50:
+            return f"{obj.content[:50]}..."
+        return obj.content
+
+
+# Video Sessions
+class SessionAttendeeInline(admin.TabularInline):
+    model = SessionAttendee
+    extra = 0
+    fields = ['user', 'joined_at', 'left_at', 'attendance_duration']
+    readonly_fields = ['attendance_duration']
+
+
+@admin.register(VideoSession)
+class VideoSessionAdmin(admin.ModelAdmin):
+    list_display = ['title', 'course', 'host', 'session_type', 'scheduled_time', 'is_active', 'attendee_count']
+    list_filter = ['session_type', 'scheduled_time']
+    search_fields = ['title', 'course__title', 'host__username']
+    inlines = [SessionAttendeeInline]
+    
+    def attendee_count(self, obj):
+        return obj.attendees.count()
+    
+    def is_active(self, obj):
+        return obj.is_active
+    
+    is_active.boolean = True
+
+
+@admin.register(SessionAttendee)
+class SessionAttendeeAdmin(admin.ModelAdmin):
+    list_display = ['user', 'session', 'joined_at', 'left_at', 'attendance_duration']
+    list_filter = ['joined_at']
+    search_fields = ['user__username', 'session__title']
+    readonly_fields = ['attendance_duration']
+
+
+
+    from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db.models import Count, Sum, Avg, Q, F
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+from datetime import timedelta
+
+from .models import (
+    Course, Lesson, ContentBlock, Enrollment, Progress,
+    Quiz, Question, Answer, QuizAttempt, Certificate,
+    AIQuizLog, ChatRoom, VideoSession
+)
+from .forms import (
+    CourseForm, LessonForm, ContentBlockForm, QuizForm, 
+    QuestionForm, AnswerFormSet, AIQuizGenerationForm,
+    VideoSessionForm
+)
+
+
+# Instructor Dashboard Views
+@login_required
+def instructor_dashboard(request):
+    """Main instructor dashboard with overview statistics"""
+    
+    # Get courses created by this instructor
+    courses = Course.objects.filter(instructor=request.user)
+    total_courses = courses.count()
+    published_courses = courses.filter(status='published').count()
+    
+    # Get total students across all courses
+    total_students = Enrollment.objects.filter(
+        course__instructor=request.user
+    ).values('student').distinct().count()
+    
+    # Get recent enrollments
+    recent_enrollments = Enrollment.objects.filter(
+        course__instructor=request.user
+    ).order_by('-enrolled_at')[:10]
+    
+    # Get completion statistics
+    completion_stats = Enrollment.objects.filter(
+        course__instructor=request.user, 
+        completed=True
+    ).count()
+    
+    # Get quiz statistics
+    quiz_attempts = QuizAttempt.objects.filter(
+        quiz__lesson__course__instructor=request.user
+    )
+    total_attempts = quiz_attempts.count()
+    passed_attempts = quiz_attempts.filter(passed=True).count()
+    pass_rate = (passed_attempts / total_attempts * 100) if total_attempts > 0 else 0
+    
+    # Student activity over time (last 30 days)
+    today = timezone.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    daily_activity = []
+    for i in range(30):
+        day = thirty_days_ago + timedelta(days=i)
+        next_day = day + timedelta(days=1)
+        
+        enrollments = Enrollment.objects.filter(
+            course__instructor=request.user,
+            enrolled_at__date=day
+        ).count()
+        
+        progress_updates = Progress.objects.filter(
+            lesson__course__instructor=request.user,
+            last_accessed__date=day
+        ).count()
+        
+        quiz_taken = QuizAttempt.objects.filter(
+            quiz__lesson__course__instructor=request.user,
+            started_at__date=day
+        ).count()
+        
+        daily_activity.append({
+            'date': day.strftime('%Y-%m-%d'),
+            'enrollments': enrollments,
+            'progress': progress_updates,
+            'quizzes': quiz_taken
+        })
+    
+    context = {
+        'total_courses': total_courses,
+        'published_courses': published_courses,
+        'total_students': total_students,
+        'recent_enrollments': recent_enrollments,
+        'completion_stats': completion_stats,
+        'total_attempts': total_attempts,
+        'pass_rate': pass_rate,
+        'daily_activity': daily_activity,
+    }
+    
+    return render(request, 'education/instructor/dashboard.html', context)
+
+
+@login_required
+def instructor_courses(request):
+    """List all courses created by the instructor"""
+    courses = Course.objects.filter(instructor=request.user)
+    
+    # Add statistics to each course
+    for course in courses:
+        course.student_count = course.students.count()
+        course.completion_rate = (
+            Enrollment.objects.filter(course=course, completed=True).count() / 
+            course.student_count * 100
+        ) if course.student_count > 0 else 0
+    
+    context = {
+        'courses': courses
+    }
+    
+    return render(request, 'education/instructor/courses.html', context)
+
+
+@login_required
+def course_detail_instructor(request, course_id):
+    """Course detail page for instructors with analytics"""
+    course = get_object_or_404(Course, id=course_id, instructor=request.user)
+    
+    # Student statistics
+    total_students = course.students.count()
+    active_students = Enrollment.objects.filter(
+        course=course, 
+        last_accessed__gte=timezone.now() - timedelta(days=30)
+    ).count()
+    
+    completed_students = Enrollment.objects.filter(
+        course=course, completed=True
+    ).count()
+    
+    completion_rate = (completed_students / total_students * 100) if total_students > 0 else 0
+    
+    # Lesson engagement statistics
+    lessons = Lesson.objects.filter(course=course)
+    lesson_stats = []
+    
+    for lesson in lessons:
+        views = Progress.objects.filter(lesson=lesson).count()
+        completions = Progress.objects.filter(lesson=lesson, completed=True).count()
+        completion_percentage = (completions / views * 100) if views > 0 else 0
+        
+        # Quiz statistics if available
+        quiz_attempts = 0
+        quiz_passes = 0
+        
+        try:
+            if lesson.quiz:
+                quiz_attempts = QuizAttempt.objects.filter(quiz=lesson.quiz).count()
+                quiz_passes = QuizAttempt.objects.filter(quiz=lesson.quiz, passed=True).count()
+        except:
+            pass
+        
+        lesson_stats.append({
+            'lesson': lesson,
+            'views': views,
+            'completions': completions,
+            'completion_percentage': completion_percentage,
+            'quiz_attempts': quiz_attempts,
+            'quiz_passes': quiz_passes
+        })
+    
+    # Certificate statistics
+    certificates_issued = Certificate.objects.filter(
+        enrollment__course=course
+    ).count()
+    
+    context = {
+        'course': course,
+        'total_students': total_students,
+        'active_students': active_students,
+        'completed_students': completed_students,
+        'completion_rate': completion_rate,
+        'lesson_stats': lesson_stats,
+        'certificates_issued': certificates_issued
+    }
+    
+    return render(request, 'education/instructor/course_detail.html', context)
+
+
+@login_required
+def manage_course(request, course_id=None):
+    """Create or edit a course"""
+    if course_id:
+        course = get_object_or_404(Course, id=course_id, instructor=request.user)
+        title = "Edit Course"
+    else:
+        course = None
+        title = "Create New Course"
+
+
+        from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db.models import Count, Sum, Avg, Q, F
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+from datetime import timedelta
+
+from .models import (
+    Course, Lesson, ContentBlock, Enrollment, Progress,
+    Quiz, Question, Answer, QuizAttempt, Certificate,
+    AIQuizLog, ChatRoom, VideoSession
+)
+from .forms import (
+    CourseForm, LessonForm, ContentBlockForm, QuizForm, 
+    QuestionForm, AnswerFormSet, AIQuizGenerationForm,
+    VideoSessionForm
+)
+
+
+# Instructor Dashboard Views
+@login_required
+def instructor_dashboard(request):
+    """Main instructor dashboard with overview statistics"""
+    
+    # Get courses created by this instructor
+    courses = Course.objects.filter(instructor=request.user)
+    total_courses = courses.count()
+    published_courses = courses.filter(status='published').count()
+    
+    # Get total students across all courses
+    total_students = Enrollment.objects.filter(
+        course__instructor=request.user
+    ).values('student').distinct().count()
+    
+    # Get recent enrollments
+    recent_enrollments = Enrollment.objects.filter(
+        course__instructor=request.user
+    ).order_by('-enrolled_at')[:10]
+    
+    # Get completion statistics
+    completion_stats = Enrollment.objects.filter(
+        course__instructor=request.user, 
+        completed=True
+    ).count()
+    
+    # Get quiz statistics
+    quiz_attempts = QuizAttempt.objects.filter(
+        quiz__lesson__course__instructor=request.user
+    )
+    total_attempts = quiz_attempts.count()
+    passed_attempts = quiz_attempts.filter(passed=True).count()
+    pass_rate = (passed_attempts / total_attempts * 100) if total_attempts > 0 else 0
+    
+    # Student activity over time (last 30 days)
+    today = timezone.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    daily_activity = []
+    for i in range(30):
+        day = thirty_days_ago + timedelta(days=i)
+        next_day = day + timedelta(days=1)
+        
+        enrollments = Enrollment.objects.filter(
+            course__instructor=request.user,
+            enrolled_at__date=day
+        ).count()
+        
+        progress_updates = Progress.objects.filter(
+            lesson__course__instructor=request.user,
+            last_accessed__date=day
+        ).count()
+        
+        quiz_taken = QuizAttempt.objects.filter(
+            quiz__lesson__course__instructor=request.user,
+            started_at__date=day
+        ).count()
+        
+        daily_activity.append({
+            'date': day.strftime('%Y-%m-%d'),
+            'enrollments': enrollments,
+            'progress': progress_updates,
+            'quizzes': quiz_taken
+        })
+    
+    context = {
+        'total_courses': total_courses,
+        'published_courses': published_courses,
+        'total_students': total_students,
+        'recent_enrollments': recent_enrollments,
+        'completion_stats': completion_stats,
+        'total_attempts': total_attempts,
+        'pass_rate': pass_rate,
+        'daily_activity': daily_activity,
+    }
+    
+    return render(request, 'education/instructor/dashboard.html', context)
+
+
+@login_required
+def instructor_courses(request):
+    """List all courses created by the instructor"""
+    courses = Course.objects.filter(instructor=request.user)
+    
+    # Add statistics to each course
+    for course in courses:
+        course.student_count = course.students.count()
+        course.completion_rate = (
+            Enrollment.objects.filter(course=course, completed=True).count() / 
+            course.student_count * 100
+        ) if course.student_count > 0 else 0
+    
+    context = {
+        'courses': courses
+    }
+    
+    return render(request, 'education/instructor/courses.html', context)
+
+
+@login_required
+def course_detail_instructor(request, course_id):
+    """Course detail page for instructors with analytics"""
+    course = get_object_or_404(Course, id=course_id, instructor=request.user)
+    
+    # Student statistics
+    total_students = course.students.count()
+    active_students = Enrollment.objects.filter(
+        course=course, 
+        last_accessed__gte=timezone.now() - timedelta(days=30)
+    ).count()
+    
+    completed_students = Enrollment.objects.filter(
+        course=course, completed=True
+    ).count()
+    
+    completion_rate = (completed_students / total_students * 100) if total_students > 0 else 0
+    
+    # Lesson engagement statistics
+    lessons = Lesson.objects.filter(course=course)
+    lesson_stats = []
+    
+    for lesson in lessons:
+        views = Progress.objects.filter(lesson=lesson).count()
+        completions = Progress.objects.filter(lesson=lesson, completed=True).count()
+        completion_percentage = (completions / views * 100) if views > 0 else 0
+        
+        # Quiz statistics if available
+        quiz_attempts = 0
+        quiz_passes = 0
+        
+        try:
+            if lesson.quiz:
+                quiz_attempts = QuizAttempt.objects.filter(quiz=lesson.quiz).count()
+                quiz_passes = QuizAttempt.objects.filter(quiz=lesson.quiz, passed=True).count()
+        except:
+            pass
+        
+        lesson_stats.append({
+            'lesson': lesson,
+            'views': views,
+            'completions': completions,
+            'completion_percentage': completion_percentage,
+            'quiz_attempts': quiz_attempts,
+            'quiz_passes': quiz_passes
+        })
+    
+    # Certificate statistics
+    certificates_issued = Certificate.objects.filter(
+        enrollment__course=course
+    ).count()
+    
+    context = {
+        'course': course,
+        'total_students': total_students,
+        'active_students': active_students,
+        'completed_students': completed_students,
+        'completion_rate': completion_rate,
+        'lesson_stats': lesson_stats,
+        'certificates_issued': certificates_issued
+    }
+    
+    return render(request, 'education/instructor/course_detail.html', context)
+
+
+@login_required
+def manage_course(request, course_id=None):
+    """Create or edit a course"""
+    if course_id:
+        course = get_object_or_404(Course, id=course_id, instructor=request.user)
+        title = "Edit Course"
+    else:
+        course = None
+        title = "Create New Course"
+    
+    if request.method == 'POST':
+        form = CourseForm(request.POST, request.FILES, instance=course)
+        if form.is_valid():
+            new_course = form.save(commit=False)
+            if not course_id:
+                new_course.instructor = request.user
+            new_course.save()
+            messages.success(request, f"Course '{new_course.title}' has been saved.")
+            return redirect('instructor_courses')
+    else:
+        form = CourseForm(instance=course)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'course': course,
+    }
+    
+    return render(request, 'education/instructor/course_form.html', context)
+
+
+@login_required
+def manage_lesson(request, course_id, lesson_id=None):
+    """Create or edit a lesson"""
+    course = get_object_or_404(Course, id=course_id, instructor=request.user)
+    
+    if lesson_id:
+        lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
+        title = "Edit Lesson"
+    else:
+        lesson = None
+        title = f"Add Lesson to {course.title}"
+    
+    if request.method == 'POST':
+        form = LessonForm(request.POST, instance=lesson)
+        if form.is_valid():
+            new_lesson = form.save(commit=False)
+            new_lesson.course = course
+            new_lesson.save()
+            
+            messages.success(request, f"Lesson '{new_lesson.title}' has been saved.")
+            return redirect('course_detail_instructor', course_id=course.id)
+    else:
+        form = LessonForm(instance=lesson)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'course': course,
+        'lesson': lesson,
+    }
+    
+    return render(request, 'education/instructor/lesson_form.html', context)
+
+
+@login_required
+def manage_content_block(request, lesson_id, block_id=None):
+    """Create or edit a content block"""
+    lesson = get_object_or_404(Lesson, id=lesson_id, course__instructor=request.user)
+    
+    if block_id:
+        content_block = get_object_or_404(ContentBlock, id=block_id, lesson=lesson)
+        title = "Edit Content Block"
+    else:
+        content_block = None
+        title = f"Add Content to {lesson.title}"
+    
+    if request.method == 'POST':
+        form = ContentBlockForm(request.POST, request.FILES, instance=content_block)
+        if form.is_valid():
+            new_block = form.save(commit=False)
+            new_block.lesson = lesson
+            new_block.save()
+            
+            messages.success(request, f"Content block '{new_block.title}' has been saved.")
+            return redirect('lesson_detail_instructor', lesson_id=lesson.id)
+    else:
+        form = ContentBlockForm(instance=content_block)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'lesson': lesson,
+        'content_block': content_block,
+    }
+    
+    return render(request, 'education/instructor/content_block_form.html', context)
+
+
+@login_required
+def manage_quiz(request, lesson_id, quiz_id=None):
+    """Create or edit a quiz"""
+    lesson = get_object_or_404(Lesson, id=lesson_id, course__instructor=request.user)
+    
+    # Check if quiz already exists for this lesson
+    try:
+        quiz = Quiz.objects.get(lesson=lesson)
+        title = "Edit Quiz"
+    except Quiz.DoesNotExist:
+        quiz = None
+        title = f"Create Quiz for {lesson.title}"
+    
+    if request.method == 'POST':
+        form = QuizForm(request.POST, instance=quiz)
+        if form.is_valid():
+            new_quiz = form.save(commit=False)
+            new_quiz.lesson = lesson
+            new_quiz.save()
+            
+            messages.success(request, f"Quiz '{new_quiz.title}' has been saved.")
+            return redirect('manage_quiz_questions', quiz_id=new_quiz.id)
+    else:
+        form = QuizForm(instance=quiz)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'lesson': lesson,
+        'quiz': quiz,
+    }
+    
+    return render(request, 'education/instructor/quiz_form.html', context)
+
+
+@login_required
+def manage_quiz_questions(request, quiz_id):
+    """Manage questions for a quiz"""
+    quiz = get_object_or_404(Quiz, id=quiz_id, lesson__course__instructor=request.user)
+    questions = Question.objects.filter(quiz=quiz).order_by('order')
+    
+    context = {
+        'quiz': quiz,
+        'questions': questions,
+    }
+    
+    return render(request, 'education/instructor/quiz_questions.html', context)
+
+
+@login_required
+def manage_question(request, quiz_id, question_id=None):
+    """Create or edit a question with answers"""
+    quiz = get_object_or_404(Quiz, id=quiz_id, lesson__course__instructor=request.user)
+    
+    if question_id:
+        question = get_object_or_404(Question, id=question_id, quiz=quiz)
+        title = "Edit Question"
+    else:
+        question = None
+        title = f"Add Question to {quiz.title}"
+    
+    if request.method == 'POST':
+        form = QuestionForm(request.POST, instance=question)
+        if form.is_valid():
+            new_question = form.save(commit=False)
+            new_question.quiz = quiz
+            new_question.save()
+            
+            # Handle answer formset
+            answer_formset = AnswerFormSet(request.POST, instance=new_question)
+            if answer_formset.is_valid():
+                answer_formset.save()
+                messages.success(request, "Question and answers have been saved.")
+                return redirect('manage_quiz_questions', quiz_id=quiz.id)
+            else:
+                messages.error(request, "There was an error with the answers.")
+        else:
+            messages.error(request, "There was an error with the question form.")
+    else:
+        form = QuestionForm(instance=question)
+        answer_formset = AnswerFormSet(instance=question)
+    
+    context = {
+        'form': form,
+        'answer_formset': answer_formset,
+        'title': title,
+        'quiz': quiz,
+        'question': question,
+    }
+    
+    return render(request, 'education/instructor/question_form.html', context)
+
+
+@login_required
+def generate_quiz_with_ai(request, lesson_id):
+    """Generate quiz questions using AI based on lesson content"""
+    lesson = get_object_or_404(Lesson, id=lesson_id, course__instructor=request.user)
+    
+    if request.method == 'POST':
+        form = AIQuizGenerationForm(request.POST)
+        if form.is_valid():
+            # Get content from the lesson to use for quiz generation
+            content_blocks = ContentBlock.objects.filter(lesson=lesson, content_type='text')
+            content_text = "\n\n".join([block.content for block in content_blocks])
+            
+            # Here you would integrate with OpenAI to generate the quiz
+            # For now, we'll just log the attempt
+            
+            # Create or get quiz
+            quiz, created = Quiz.objects.get_or_create(
+                lesson=lesson,
+                defaults={
+                    'title': f"Quiz for {lesson.title}",
+                    'description': "AI-generated quiz based on lesson content",
+                    'is_ai_generated': True,
+                    'pass_mark': 70
+                }
+            )
+            
+            # Log the AI generation attempt
+            AIQuizLog.objects.create(
+                quiz=quiz,
+                content_used=content_text[:1000],  # Truncated for logging
+                prompt=form.cleaned_data['prompt'],
+                result="Placeholder for AI response"
+            )
+            
+            messages.success(request, "Quiz generation has been initiated.")
+            return redirect('manage_quiz_questions', quiz_id=quiz.id)
+    else:
+        form = AIQuizGenerationForm()
+    
+    context = {
+        'form': form,
+        'lesson': lesson,
+    }
+    
+    return render(request, 'education/instructor/ai_quiz_form.html', context)
+
+
+@login_required
+def quiz_results(request, quiz_id):
+    """View quiz results and analytics"""
+    quiz = get_object_or_404(Quiz, id=quiz_id, lesson__course__instructor=request.user)
+    attempts = QuizAttempt.objects.filter(quiz=quiz).order_by('-started_at')
+    
+    # Calculate statistics
+    total_attempts = attempts.count()
+    passed_attempts = attempts.filter(passed=True).count()
+    pass_rate = (passed_attempts / total_attempts * 100) if total_attempts > 0 else 0
+    
+    avg_score = attempts.aggregate(Avg('score'))['score__avg'] or 0
+    
+    # Question difficulty analysis
+    questions = Question.objects.filter(quiz=quiz)
+    question_stats = []
+    
+    for question in questions:
+        correct_answers = QuizAnswer.objects.filter(
+            question=question, 
+            is_correct=True
+        ).count()
+        
+        total_answers = QuizAnswer.objects.filter(question=question).count()
+        correct_percentage = (correct_answers / total_answers * 100) if total_answers > 0 else 0
+        
+        question_stats.append({
+            'question': question.text[:50] + '...' if len(question.text) > 50 else question.text,
+            'correct_percentage': correct_percentage
+        })
+    
+    context = {
+        'quiz': quiz,
+        'attempts': attempts,
+        'total_attempts': total_attempts,
+        'pass_rate': pass_rate,
+        'avg_score': avg_score,
+        'question_stats': question_stats
+    }
+    
+    return render(request, 'education/instructor/quiz_results.html', context)
+
+
+@login_required
+def manage_video_session(request, course_id, session_id=None):
+    """Create or edit a video session"""
+    course = get_object_or_404(Course, id=course_id, instructor=request.user)
+    
+    if session_id:
+        session = get_object_or_404(VideoSession, id=session_id, course=course)
+        title = "Edit Video Session"
+    else:
+        session = None
+        title = f"Create Video Session for {course.title}"
+    
+    if request.method == 'POST':
+        form = VideoSessionForm(request.POST, instance=session)
+        if form.is_valid():
+            new_session = form.save(commit=False)
+            new_session.course = course
+            new_session.host = request.user
+            
+            # Here you would integrate with video API (Jitsi/Daily.co) to create session
+            # For now, we'll just create a placeholder
+            new_session.session_id = f"session_{timezone.now().timestamp()}"
+            new_session.meeting_link = f"https://meet.example.com/{new_session.session_id}"
+            
+            new_session.save()
+            messages.success(request, f"Video session '{new_session.title}' has been scheduled.")
+            return redirect('course_detail_instructor', course_id=course.id)
+    else:
+        form = VideoSessionForm(instance=session)
+    
+    context = {
+        'form': form,
+        'title': title,
+        'course': course,
+        'session': session,
+    }
+    
+    return render(request, 'education/instructor/video_session_form.html', context)
+
+
+@login_required
+def student_performance(request, course_id):
+    """View detailed student performance for a course"""
+    course = get_object_or_404(Course, id=course_id, instructor=request.user)
+    enrollments = Enrollment.objects.filter(course=course).select_related('student')
+    
+    student_data = []
+    for enrollment in enrollments:
+        # Calculate progress
+        total_lessons = Lesson.objects.filter(course=course).count()
+        completed_lessons = Progress.objects.filter(
+            enrollment=enrollment,
+            completed=True
+        ).count()
+        
+        progress_percentage = (completed_lessons / total_lessons * 100) if total_lessons > 0 else 0
+        
+        # Get quiz performance
+        quiz_attempts = QuizAttempt.objects.filter(
+            student=enrollment.student,
+            quiz__lesson__course=course
+        )
+        
+        avg_score = quiz_attempts.aggregate(Avg('score'))['score__avg'] or 0
+        
+        # Check if certificate was issued
+        try:
+            certificate = Certificate.objects.get(enrollment=enrollment)
+            certificate_issued = certificate.issued_date
+        except Certificate.DoesNotExist:
+            certificate_issued = None
+        
+        student_data.append({
+            'student': enrollment.student,
+            'enrollment_date': enrollment.enrolled_at,
+            'last_activity': enrollment.last_accessed,
+            'progress': progress_percentage,
+            'avg_quiz_score': avg_score,
+            'completed': enrollment.completed,
+            'certificate_issued': certificate_issued
+        })
+    
+    context = {
+        'course': course,
+        'student_data': student_data
+    }
+    
+    return render(request, 'education/instructor/student_performance.html', context)
+
+
+@login_required
+@require_POST
+def generate_certificate(request, enrollment_id):
+    """Generate certificate for a student who completed a course"""
+    enrollment = get_object_or_404(
+        Enrollment, 
+        id=enrollment_id,
+        course__instructor=request.user,
+        completed=True
+    )
+    
+    # Check if certificate already exists
+    certificate, created = Certificate.objects.get_or_create(
+        enrollment=enrollment,
+        defaults={
+            'certificate_id': f"CERT-{enrollment.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        }
+    )
+    
+    if created:
+        # Here you would generate the actual PDF certificate
+        # For now we'll just create a placeholder record
+        messages.success(
+            request, 
+            f"Certificate generated for {enrollment.student.username} successfully."
+        )
+    else:
+        messages.info(
+            request,
+            f"Certificate already exists for {enrollment.student.username}."
+        )
+    
+    return redirect('student_performance', course_id=enrollment.course.id)
+
+
+    from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponse
+from django.db.models import Count, Q
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+from datetime import timedelta
+
+from .models import (
+    Course, Lesson, ContentBlock, Enrollment, Progress,
+    Quiz, Question, Answer, QuizAttempt, QuizAnswer, Certificate,
+    ChatRoom, ChatMessage, VideoSession, SessionAttendee
+)
+from .forms import QuizAttemptForm, ChatMessageForm
+
+
+# Student Dashboard Views
+@login_required
+def student_dashboard(request):
+    """Main student dashboard with enrolled courses and progress"""
+    # Get enrollments for this student
+    enrollments = Enrollment.objects.filter(student=request.user).select_related('course')
+    
+    # Calculate overall statistics
+    total_courses = enrollments.count()
+    completed_courses = enrollments.filter(completed=True).count()
+    in_progress_courses = total_courses - completed_courses
+    
+    # Get certificates
+    certificates = Certificate.objects.filter(enrollment__student=request.user)
+    
+    # Calculate learning activity
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    
+    recent_progress = Progress.objects.filter(
+        enrollment__student=request.user,
+        last_accessed__gte=week_ago
+    ).select_related('lesson', 'enrollment__course')
+    
+    recent_quiz_attempts = QuizAttempt.objects.filter(
+        student=request.user,
+        started_at__gte=week_ago
+    ).select_related('quiz__lesson__course')
+    
+    # Get recommended courses (simple implementation)
+    # In a real app, this would use more sophisticated recommendation logic
+    enrolled_course_ids = enrollments.values_list('course_id', flat=True)
+    recommended_courses = Course.objects.filter(status='published').exclude(
+        id__in=enrolled_course_ids
+    )[:5]
+    
+    # Get upcoming video sessions
+    upcoming_sessions = VideoSession.objects.filter(
+        course__in=enrolled_course_ids,
+        scheduled_time__gte=timezone.now()
+    ).order_by('scheduled_time')[:5]
+    
+    context = {
+        'enrollments': enrollments,
+        'total_courses': total_courses,
+        'completed_courses': completed_courses,
+        'in_progress_courses': in_progress_courses,
+        'certificates': certificates,
+        'recent_progress': recent_progress,
+        'recent_quiz_attempts': recent_quiz_attempts,
+        'recommended_courses': recommended_courses,
+        'upcoming_sessions': upcoming_sessions,
+    }
+    
+    return render(request, 'education/student/dashboard.html', context)
+
+
+@login_required
+def course_catalog(request):
+    """View available courses for enrollment"""
+    # Get all published courses
+    courses = Course.objects.filter(status='published')
+    
+    # Get the courses the student is already enrolled in
+    enrolled_course_ids = Enrollment.objects.filter(
+        student=request.user
+    ).values_list('course_id', flat=True)
+    
+    # Mark courses as enrolled or not
+    for course in courses:
+        course.is_enrolled = course.id in enrolled_course_ids
+    
+    context = {
+        'courses': courses
+    }
+    
+    return render(request, 'education/student/course_catalog.html', context)
+
+
+@login_required
+@require_POST
+def enroll_course(request, course_id):
+    """Enroll in a course"""
+    course = get_object_or_404(Course, id=course_id, status='published')
+    
+    # Check if already enrolled
+    enrollment, created = Enrollment.objects.get_or_create(
+        student=request.user,
+        course=course,
+        defaults={'enrolled_at': timezone.now()}
+    )
+    
+    if created:
+        # Create progress entries for all lessons
+        lessons = Lesson.objects.filter(course=course)
+        for lesson in lessons:
+            Progress.objects.create(enrollment=enrollment, lesson=lesson)
+        
+        messages.success(request, f"You have successfully enrolled in {course.title}.")
+    else:
+        messages.info(request, f"You are already enrolled in {course.title}.")
+    
+    return redirect('student_course_detail', course_id=course.id)
+
+
+@login_required
+def student_course_detail(request, course_id):
+    """View course details as a student"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check if enrolled
+    try:
+        enrollment = Enrollment.objects.get(student=request.user, course=course)
+    except Enrollment.DoesNotExist:
+        # If not enrolled and course is published, show preview
+        if course.status == 'published':
+            context = {
+                'course': course,
+                'is_preview': True
+            }
+            return render(request, 'education/student/course_preview.html', context)
+        else:
+            messages.error(request, "This course is not available.")
+            return redirect('course_catalog')
+    
+    # Get lessons and progress
+    lessons = Lesson.objects.filter(course=course).order_by('order')
+    progress_data = {}
+    
+    for lesson in lessons:
+        try:
+            progress = Progress.objects.get(enrollment=enrollment, lesson=lesson)
+            progress_data[lesson.id] = progress
+        except Progress.DoesNotExist:
+            progress_data[lesson.id] = None
+    
+    # Check for certificate
+    try:
+        certificate = Certificate.objects.get(enrollment=enrollment)
+    except Certificate.DoesNotExist:
+        certificate = None
+    
+    # Get course chat rooms
+    chat_rooms = ChatRoom.objects.filter(course=course)
+    
+    # Get upcoming video sessions
+    upcoming_sessions = VideoSession.objects.filter(
+        course=course,
+        scheduled_time__gte=timezone.now()
+    ).order_by('scheduled_time')
+    
+    context = {
+        'course': course,
+        'enrollment': enrollment,
+        'lessons': lessons,
+        'progress_data': progress_data,
+        'certificate': certificate,
+        'chat_rooms': chat_rooms,
+        'upcoming_sessions': upcoming_sessions,
+    }
+    
+    return render(request, 'education/student/course_detail.html', context)
+
+
+@login_required
+def lesson_detail(request, lesson_id):
+    """View a specific lesson with content"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    course = lesson.course
+    
+    # Check if enrolled
+    try:
+        enrollment = Enrollment.objects.get(student=request.user, course=course)
+    except Enrollment.DoesNotExist:
+        messages.error(request, "You are not enrolled in this course.")
+        return redirect('course_catalog')
+    
+    # Get progress or create if doesn't exist
+    progress, created = Progress.objects.get_or_create(
+        enrollment=enrollment,
+        lesson=lesson,
+        defaults={'last_accessed': timezone.now()}
+    )
+    
+    if not created:
+        # Update last accessed time
+        progress.last_accessed = timezone.now()
+        progress.save()
+    
+    # Get content blocks
+    content_blocks = ContentBlock.objects.filter(lesson=lesson).order_by('order')
+    
+    # Check if quiz exists
+    try:
+        quiz = Quiz.objects.get(lesson=lesson)
+        has_quiz = True
+        
+        # Check if student has attempted the quiz
+        quiz_attempts = QuizAttempt.objects.filter(
+            student=request.user,
+            quiz=quiz
+        ).order_by('-started_at')
+        
+        latest_attempt = quiz_attempts.first()
+    except Quiz.DoesNotExist:
+        has_quiz = False
+        quiz = None
+        quiz_attempts = None
+        latest_attempt = None
+    
+    # Navigation - get previous and next lessons
+    previous_lesson = Lesson.objects.filter(
+        course=course,
+        order__lt=lesson.order
+    ).order_by('-order').first()
+    
+    next_lesson = Lesson.objects.filter(
+        course=course,
+        order__gt=lesson.order
+    ).order_by('order').first()
+    
+    context = {
+        'lesson': lesson,
+        'course': course,
+        'content_blocks': content_blocks,
+        'progress': progress,
+        'has_quiz': has_quiz,
+        'quiz': quiz,
+        'quiz_attempts': quiz_attempts,
+        'latest_attempt': latest_attempt,
+        'previous_lesson': previous_lesson,
+        'next_lesson': next_lesson,
+    }
+    
+    return render(request, 'education/student/lesson_detail.html', context)
+
+
+@login_required
+@require_POST
+def mark_lesson_complete(request, lesson_id):
+    """Mark a lesson as completed"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    
+    # Check if enrolled
+    try:
+        enrollment = Enrollment.objects.get(student=request.user, course=lesson.course)
+    except Enrollment.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Not enrolled'}, status=403)
+    
+    # Update progress
+    progress, created = Progress.objects.get_or_create(
+        enrollment=enrollment,
+        lesson=lesson,
+        defaults={'completed': True, 'last_accessed': timezone.now()}
+    )
+    
+    if not created:
+        progress.completed = True
+        progress.save()
+    
+    # Check if all lessons are completed
+    total_lessons = Lesson.objects.filter(course=lesson.course).count()
+    completed_lessons = Progress.objects.filter(
+        enrollment=enrollment,
+        completed=True
+    ).count()
+    
+    # If all lessons completed, mark course as complete
+    if total_lessons == completed_lessons:
+        enrollment.completed = True
+        enrollment.save()
+        
+        # Generate certificate automatically
+        certificate, cert_created = Certificate.objects.get_or_create(
+            enrollment=enrollment,
+            defaults={
+                'certificate_id': f"CERT-{enrollment.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+            }
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'course_completed': True,
+            'certificate_id': certificate.certificate_id
+        })
+    
+    return JsonResponse({'success': True, 'course_completed': False})
+
+
+@login_required
+def take_quiz(request, quiz_id):
+    """Take a quiz for a lesson"""
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    lesson = quiz.lesson
+    course = lesson.course
+    
+    # Check if enrolled
+    try:
+        enrollment = Enrollment.objects.get(student=request.user, course=course)
+    except Enrollment.DoesNotExist:
+        messages.error(request, "You are not enrolled in this course.")
+        return redirect('course_catalog')
+    
+    # Create a new quiz attempt
+    attempt = QuizAttempt.objects.create(
+        student=request.user,
+        quiz=quiz,
+        started_at=timezone.now()
+    )
+    
+    # Get all questions
+    questions = Question.objects.filter(quiz=quiz).order_by('order')
+    
+    if request.method == 'POST':
+        form = QuizAttemptForm(request.POST, questions=questions)
+        if form.is_valid():
+            # Process answers
+            total_questions = questions.count()
+            correct_answers = 0
+            
+            for question in questions:
+                answer_id = form.cleaned_data.get(f'question_{question.id}')
+                if answer_id:
+                    answer = Answer.objects.get(id=answer_id)
+                    is_correct = answer.is_correct
+                    
+                    # Save the student's answer
+                    QuizAnswer.objects.create(
+                        attempt=attempt,
+                        question=question,
+                        answer=answer,
+                        is_correct=is_correct
+                    )
+                    
+                    if is_correct:
+                        correct_answers += 1
+            
+            # Calculate score
+            score = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
+            passed = score >= quiz.pass_mark
+            
+            # Update the attempt
+            attempt.completed_at = timezone.now()
+            attempt.score = score
+            attempt.passed = passed
+            attempt.save()
+            
+            # Mark the lesson as completed if passed
+            if passed:
+                progress, _ = Progress.objects.get_or_create(
+                    enrollment=enrollment,
+                    lesson=lesson
+                )
+                progress.completed = True
+                progress.save()
+            
+            # Check if all lessons are completed
+            if passed:
+                total_lessons = Lesson.objects.filter(course=course).count()
+                completed_lessons = Progress.objects.filter(
+                    enrollment=enrollment,
+                    completed=True
+                ).count()
+                
+                # If all lessons completed, mark course as complete
+                if total_lessons == completed_lessons:
+                    enrollment.completed = True
+                    enrollment.save()
+            
+            return redirect('quiz_results_student', attempt_id=attempt.id)
+    else:
+        form = QuizAttemptForm(questions=questions)
+    
+    context = {
+        'quiz': quiz,
+        'lesson': lesson,
+        'course': course,
+        'questions': questions,
+        'form': form,
+        'attempt': attempt
+    }
+    
+    return render(request, 'education/student/take_quiz.html', context)
+
+
+@login_required
+def quiz_results_student(request, attempt_id):
+    """View results of a quiz attempt"""
+    attempt = get_object_or_404(QuizAttempt, id=attempt_id, student=request.user)
+    quiz = attempt.quiz
+    lesson = quiz.lesson
+    course = lesson.course
+    
+    # Get all answers for this attempt
+    answers = QuizAnswer.objects.filter(attempt=attempt).select_related('question', 'answer')
+    
+    context = {
+        'attempt': attempt,
+        'quiz': quiz,
+        'lesson': lesson,
+        'course': course,
+        'answers': answers,
+        'passed': attempt.passed
+    }
+    
+    return render(request, 'education/student/quiz_results.html', context)
+
+
+@login_required
+def view_certificate(request, certificate_id):
+    """View or download a certificate"""
+    certificate = get_object_or_404(
+        Certificate, 
+        certificate_id=certificate_id,
+        enrollment__student=request.user
+    )
+    
+    # In a real application, you would generate or serve the PDF here
+    # For now, we'll just render a template
+    
+    context = {
+        'certificate': certificate,
+        'enrollment': certificate.enrollment,
+        'course': certificate.enrollment.course,
+        'issue_date': certificate.issued_date
+    }
+    
+    return render(request, 'education/student/certificate.html', context)
+
+
+@login_required
+def chat_room(request, room_id):
+    """View and interact with a chat room"""
+    chat_room = get_object_or_404(ChatRoom, id=room_id)
+    course = chat_room.course
+    
+    # Check if enrolled
+    try:
+        enrollment = Enrollment.objects.get(student=request.user, course=course)
+    except Enrollment.DoesNotExist:
+        messages.error(request, "You are not enrolled in this course.")
+        return redirect('course_catalog')
+    
+    # Get messages
+    chat_messages = ChatMessage.objects.filter(room=chat_room).order_by('timestamp')
+    
+    if request.method == 'POST':
+        form = ChatMessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.room = chat_room
+            message.user = request.user
+            message.save()
+            return redirect('chat_room', room_id=room_id)
+    else:
+        form = ChatMessageForm()
+    
+    context = {
+        'chat_room': chat_room,
+        'course': course,
+        'chat_messages': chat_messages,
+        'form': form,
+    }
+    
+    return render(request, 'education/student/chat_room.html', context)
+
+
+@login_required
+def join_video_session(request, session_id):
+    """Join a live video session"""
+    session = get_object_or_404(
+        VideoSession, 
+        id=session_id,
+        scheduled_time__lte=timezone.now() + timedelta(minutes=15)  # Allow joining 15 min before
+    )
+    course = session.course
+    
+    # Check if enrolled
+    try:
+        enrollment = Enrollment.objects.get(student=request.user, course=course)
+    except Enrollment.DoesNotExist:
+        messages.error(request, "You are not enrolled in this course.")
+        return redirect('course_catalog')
+    
+    # Record attendance
+    attendee, created = SessionAttendee.objects.get_or_create(
+        session=session,
+        user=request.user,
+        defaults={'joined_at': timezone.now()}
+    )
+    
+    if not created:
+        attendee.joined_at = timezone.now()
+        attendee.save()
+    
+    context = {
+        'session': session,
+        'course': course,
+        'meeting_link': session.meeting_link,
+    }
+    
+    return render(request, 'education/student/video_session.html', context)
+
+
+@login_required
+def learning_path(request):
+    """View personalized learning path with course recommendations"""
+    # Get enrollments for this student
+    enrollments = Enrollment.objects.filter(student=request.user).select_related('course')
+    enrolled_courses = [enrollment.course for enrollment in enrollments]
+    
+    # Get completed courses
+    completed_courses = [
+        enrollment.course for enrollment in enrollments if enrollment.completed
+    ]
+    
+    # Get in-progress courses
+    in_progress_courses = [
+        enrollment.course for enrollment in enrollments if not enrollment.completed
+    ]
+    
+    # Get categories of enrolled courses for recommendations
+    enrolled_categories = set()
+    for course in enrolled_courses:
+        if course.category:
+            enrolled_categories.add(course.category)
+    
+    # Get recommended courses based on categories
+    recommended_courses = Course.objects.filter(
+        status='published',
+        category__in=enrolled_categories
+    ).exclude(
+        id__in=[course.id for course in enrolled_courses]
+    ).distinct()[:5]
+    
+    # Get featured courses (not category-based)
+    featured_courses = Course.objects.filter(
+        status='published',
+        featured=True
+    ).exclude(
+        id__in=[course.id for course in enrolled_courses]
+    )[:3]
+    
+    context = {
+        'completed_courses': completed_courses,
+        'in_progress_courses': in_progress_courses,
+        'recommended_courses': recommended_courses,
+        'featured_courses': featured_courses,
+    }
+    
+    return render(request, 'education/student/learning_path.html', context)
+
+
+@login_required
+def student_analytics(request):
+    """View learning analytics for the student"""
+    # Get enrollments
+    enrollments = Enrollment.objects.filter(student=request.user).select_related('course')
+    
+    # Calculate time spent learning (last 30 days)
+    today = timezone.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    progress_records = Progress.objects.filter(
+        enrollment__student=request.user,
+        last_accessed__gte=thirty_days_ago
+    )
+    
+    # Calculate daily learning time (simplified - in a real app would be more complex)
+    daily_learning = {}
+    for day_offset in range(30):
+        day = thirty_days_ago + timedelta(days=day_offset)
+        day_str = day.strftime('%Y-%m-%d')
+        day_progress = progress_records.filter(last_accessed__date=day)
+        
+        # Assume each progress record represents 15 minutes of activity
+        daily_learning[day_str] = day_progress.count() * 15
+    
+    # Calculate quiz performance
+    quiz_attempts = QuizAttempt.objects.filter(
+        student=request.user,
+        completed_at__isnull=False
+    ).select_related('quiz__lesson__course')
+    
+    overall_score = quiz_attempts.aggregate(Avg('score'))['score__avg'] or 0
+    
+    # Calculate course-wise performance
+    course_performance = []
+    for enrollment in enrollments:
+        course = enrollment.course
+        
+        # Calculate progress percentage
+        total_lessons = Lesson.objects.filter(course=course).count()
+        completed_lessons = Progress.objects.filter(
+            enrollment=enrollment,
+            completed=True
+        ).count()
+        
+        progress_percentage = (completed_lessons / total_lessons * 100) if total_lessons > 0 else 0
+        
+        # Get quiz scores for this course
+        course_quiz_attempts = quiz_attempts.filter(quiz__lesson__course=course)
+        avg_quiz_score = course_quiz_attempts.aggregate(Avg('score'))['score__avg'] or 0
+        
+        course_performance.append({
+            'course': course,
+            'progress': progress_percentage,
+            'quiz_score': avg_quiz_score,
+            'completed': enrollment.completed,
+        })
+    
+    context = {
+        'enrollments': enrollments,
+        'daily_learning': daily_learning,
+        'overall_score': overall_score,
+        'course_performance': course_performance,
+    }
+    
+    return render(request, 'education/student/analytics.html', context)
+
+
+@login_required
+def search_courses(request):
+    """Search for courses"""
+    query = request.GET.get('q', '')
+    category = request.GET.get('category', '')
+    difficulty = request.GET.get('difficulty', '')
+    
+    courses = Course.objects.filter(status='published')
+    
+    if query:
+        courses = courses.filter(
+            Q(title__icontains=query) | 
+            Q(description__icontains=query) |
+            Q(instructor__username__icontains=query)
+        )
+    
+    if category:
+        courses = courses.filter(category=category)
+    
+    if difficulty:
+        courses = courses.filter(difficulty_level=difficulty)
+    
+    # Get enrolled courses
+    enrolled_course_ids = Enrollment.objects.filter(
+        student=request.user
+    ).values_list('course_id', flat=True)
+    
+    # Mark courses as enrolled or not
+    for course in courses:
+        course.is_enrolled = course.id in enrolled_course_ids
+    
+    # Get all categories for filter dropdown
+    all_categories = Course.objects.values_list('category', flat=True).distinct()
+    
+    context = {
+        'courses': courses,
+        'query': query,
+        'category': category,
+        'difficulty': difficulty,
+        'all_categories': all_categories,
+    }
+    
+    return render(request, 'education/student/search_results.html', context)
+
+
+@login_required
+def download_resources(request, content_id):
+    """Download resources attached to content blocks"""
+    content_block = get_object_or_404(ContentBlock, id=content_id)
+    lesson = content_block.lesson
+    course = lesson.course
+    
+    # Check if enrolled
+    try:
+        enrollment = Enrollment.objects.get(student=request.user, course=course)
+    except Enrollment.DoesNotExist:
+        messages.error(request, "You are not enrolled in this course.")
+        return redirect('course_catalog')
+    
+    if content_block.attachment:
+        # Get the file
+        file_path = content_block.attachment.path
+        file_name = content_block.attachment.name.split('/')[-1]
+        
+        # Serve the file
+        with open(file_path, 'rb') as fh:
+            response = HttpResponse(fh.read(), content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+            return response
+    else:
+        messages.error(request, "No attachment found for this content.")
+        return redirect('lesson_detail', lesson_id=lesson.id)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # SkillUp - Educational Platform Structure
+
+```
+skillup/
+│
+├── manage.py
+│
+├── eduPlatform/                  # Project configuration folder
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py                   # Main URL routing
+│   ├── asgi.py
+│   └── wsgi.py
+│
+├── core/                         # Core app - User profiles, common functionality
+│   ├── __init__.py
+│   ├── admin.py                  # User profile admin
+│   ├── apps.py
+│   ├── models.py                 # Profile model
+│   ├── forms.py                  # Profile forms
+│   ├── views.py                  # Auth and profile views  
+│   ├── urls.py                   # Core URL patterns
+│   ├── signals.py                # For profile creation on user signup
+│   ├── middleware.py             # Custom middleware if needed
+│   └── templates/
+│       └── core/
+│           ├── login.html
+│           ├── register.html
+│           ├── profile.html
+│           └── dashboard.html
+│
+├── courses/                      # Course management app
+│   ├── __init__.py
+│   ├── admin.py                  # Course, Lesson admin
+│   ├── apps.py
+│   ├── models.py                 # Course, Lesson, ContentBlock models
+│   ├── forms.py                  # CourseForm, LessonForm, ContentBlockForm
+│   ├── views/
+│   │   ├── __init__.py
+│   │   ├── instructor.py         # Instructor dashboard, course management
+│   │   └── student.py            # Student course views
+│   ├── urls.py                   # Course URL patterns
+│   ├── signals.py
+│   └── templates/
+│       └── courses/
+│           ├── instructor/
+│           │   ├── course_form.html
+│           │   ├── course_list.html
+│           │   ├── course_detail.html
+│           │   ├── lesson_form.html
+│           │   ├── content_block_form.html
+│           │   └── student_performance.html
+│           └── student/
+│               ├── course_catalog.html
+│               ├── course_detail.html
+│               ├── course_preview.html
+│               ├── lesson_detail.html
+│               ├── learning_path.html
+│               └── analytics.html
+│
+├── enrollments/                  # Enrollment & progress tracking
+│   ├── __init__.py
+│   ├── admin.py                  # Enrollment, Progress admin
+│   ├── apps.py
+│   ├── models.py                 # Enrollment, Progress models
+│   ├── forms.py
+│   ├── views.py                  # Enrollment views
+│   ├── urls.py                   # Enrollment URL patterns
+│   └── templates/
+│       └── enrollments/
+│           ├── enroll.html
+│           └── progress.html
+│
+├── quizzes/                      # Assessment system
+│   ├── __init__.py
+│   ├── admin.py                  # Quiz, Question, Answer admin
+│   ├── apps.py
+│   ├── models.py                 # Quiz, Question, Answer, QuizAttempt, QuizAnswer models
+│   ├── forms.py                  # QuizForm, QuestionForm, AnswerFormSet, QuizAttemptForm
+│   ├── views/
+│   │   ├── __init__.py
+│   │   ├── instructor.py         # Quiz creation, results analysis
+│   │   └── student.py            # Quiz taking, viewing results
+│   ├── urls.py                   # Quiz URL patterns
+│   ├── utils/
+│   │   └── ai_generation.py      # AI quiz generation logic
+│   └── templates/
+│       └── quizzes/
+│           ├── instructor/
+│           │   ├── quiz_form.html
+│           │   ├── quiz_questions.html
+│           │   ├── question_form.html
+│           │   ├── quiz_results.html
+│           │   └── ai_quiz_form.html
+│           └── student/
+│               ├── take_quiz.html
+│               └── quiz_results.html
+│
+├── certificates/                 # Certificate system
+│   ├── __init__.py
+│   ├── admin.py                  # Certificate admin
+│   ├── apps.py
+│   ├── models.py                 # Certificate model
+│   ├── forms.py
+│   ├── views.py                  # Certificate generation & viewing
+│   ├── urls.py                   # Certificate URL patterns
+│   ├── utils/
+│   │   └── pdf_generator.py      # PDF generation for certificates
+│   └── templates/
+│       └── certificates/
+│           └── certificate.html
+│
+├── communications/               # Chat and video sessions
+│   ├── __init__.py
+│   ├── admin.py                  # ChatRoom, ChatMessage, VideoSession admin
+│   ├── apps.py
+│   ├── models.py                 # ChatRoom, ChatMessage, VideoSession, SessionAttendee models
+│   ├── forms.py                  # ChatMessageForm, VideoSessionForm
+│   ├── views.py                  # Chat and video session views
+│   ├── urls.py                   # Communications URL patterns
+│   ├── consumers.py              # WebSocket consumers for real-time chat
+│   └── templates/
+│       └── communications/
+│           ├── chat_room.html
+│           └── video_session.html
+│
+├── ai/                           # AI integration
+│   ├── __init__.py
+│   ├── admin.py                  # AIQuizLog admin
+│   ├── apps.py
+│   ├── models.py                 # AIQuizLog model
+│   ├── services.py               # AI service integrations (OpenAI)
+│   └── utils.py                  # Helper functions for AI services
+│
+├── static/                       # Static files
+│   ├── css/
+│   │   ├── main.css
+│   │   └── tailwind.css          # If using Tailwind
+│   ├── js/
+│   │   ├── main.js
+│   │   └── chat.js               # WebSocket functionality for chat
+│   └── images/
+│       ├── logo.png
+│       └── default-course.png
+│
+├── media/                        # User-uploaded files
+│   ├── courses/
+│   │   └── thumbnails/
+│   ├── lesson_content/
+│   └── certificates/
+│
+└── templates/                    # Project-wide templates
+    ├── base.html                 # Main template with header/footer
+    ├── includes/                 # Shared template parts
+    │   ├── header.html
+    │   ├── footer.html
+    │   ├── sidebar.html
+    │   └── messages.html         # For Django messages framework
+    └── dashboard/
+        ├── instructor_base.html  # Base template for instructor section
+        └── student_base.html     # Base template for student section
+```

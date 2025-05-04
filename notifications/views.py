@@ -18,3 +18,4 @@ def notification_count(request):
         count = Notification.objects.filter(recipient=request.user, read=False).count()
     return {'notification_count': count}
 
+
