@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">My Learning Dashboard</h1>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>My Enrolled Courses</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for enrollment in enrollments %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <img src="{{ enrollment.course.cover_image.url }}" class="card-img-top" alt="{{ enrollment.course.title }}">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ enrollment.course.title }}</h5>
+                                    <p class="card-text">{{ enrollment.course.description|truncatewords:15 }}</p>
+                                    <div class="progress mb-3">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ enrollment.progress }}%;" aria-valuenow="{{ enrollment.progress }}" aria-valuemin="0" aria-valuemax="100">{{ enrollment.progress }}%</div>
+                                    </div>
+                                    <p class="text-muted">Status: {{ enrollment.get_status_display }}</p>
+                                </div>
+                                <div class="card-footer d-flex justify-content-between">
+                                    <a href="{% url 'course_detail' enrollment.course.slug %}" class="btn btn-outline-primary">View Course</a>
+                                    {% if enrollment.course.modules.exists and enrollment.course.modules.first.contents.exists %}
+                                    <a href="{% url 'view_content' enrollment.course.modules.first.contents.first.id %}" class="btn btn-primary">Continue</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <p>You haven't enrolled in any courses yet.</p>
+                                <a href="{% url 'course_list' %}" class="btn btn-primary mt-2">Browse Courses</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

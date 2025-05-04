@@ -30,7 +30,10 @@ INSTALLED_APPS = [
     'courses',
     'channels',
     'channels_redis',
+    "crispy_bootstrap5", 
 ]
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -120,3 +123,8 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = ["bootstrap5"]
+CRISPY_TEMPLATE_PACK = "bootstrap5"

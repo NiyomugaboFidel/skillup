@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>{{ course.title }}</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for module in course.modules.all %}
+                    <div class="list-group-item list-group-item-action {% if module == content.module %}active{% endif %}">
+                        <h6 class="mb-1">{{ module.title }}</h6>
+                        {% if module == content.module or user == course.instructor %}
+                        <div class="list-group">
+                            {% for module_content in module.contents.all %}
+                            <a href="{% url 'view_content' module_content.id %}" class="list-group-item list-group-item-action {% if module_content == content %}active{% endif %}">
+                                {{ module_content.title }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ content.title }}</h3>
+                </div>
+                <div class="card-body">
+                    {% if content.content_type == 'text' %}
+                    <div class="content-text">
+                        {{ content.text_content|linebreaks }}
+                    </div>
+                    {% elif content.content_type == 'video' %}
+                    <div class="content-video">
+                        <div class="ratio ratio-16x9">
+                            <iframe src="{{ content.video_url }}" title="{{ content.title }}" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                    {% elif content.content_type == 'file' %}
+                    <div class="content-file">
+                        <a href="{{ content.file.url }}" class="btn btn-primary" download>
+                            <i class="fas fa-download me-2"></i> Download File
+                        </a>
+                    </div>
+                    {% elif content.content_type == 'quiz' %}
+                    <div class="content-quiz">
+                        <p>{{ content.text_content|linebreaks }}</p>
+                        <!-- Quiz implementation would go here -->
+                        <div class="alert alert-info">
+                            Quiz functionality requires additional implementation.
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            {% if prev_content %}
+                            <a href="{% url 'view_content' prev_content.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left"></i> Previous
+                            </a>
+                            {% elif prev_module and prev_module.contents.exists %}
+                            <a href="{% url 'view_content' prev_module.contents.last.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left"></i> Previous Module
+                            </a>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'course_detail' course.slug %}" class="btn btn-outline-secondary">
+                            Back to Course
+                        </a>
+                        <div>
+                            {% if next_content %}
+                            <a href="{% url 'view_content' next_content.id %}" class="btn btn-outline-primary">
+                                Next <i class="fas fa-arrow-right"></i>
+                            </a>
+                            {% elif next_module and next_module.contents.exists %}
+                            <a href="{% url 'view_content' next_module.contents.first.id %}" class="btn btn-outline-primary">
+                                Next Module <i class="fas fa-arrow-right"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environment
+env/
+venv/
+ENV/
+.venv/
+.env/
+*.env
+
+# Django specific
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+
+# VSCode / IDEs
+.vscode/
+.idea/
+
+# Mac/Linux system files
+.DS_Store
+*.swp
+
+# Pip dependency files
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Migrations (optional — include if auto-generated)
+*/migrations/*.py
+*/migrations/*.pyc
+
+# Test and coverage files
+htmlcov/
+.tox/
+.nox/
+.coverage
+coverage.xml
+*.cover
+*.py,cover
+
+# Node (if using)
+node_modules/
+npm-debug.log
+
+# Pytest cache
+.pytest_cache/
