@@ -295,3 +295,10 @@ def view_content(request, content_id):
         'prev_module': prev_module,
         'next_module': next_module,
     })
+    ModuleFormSet = forms.modelformset_factory(
+    Module,
+    form=ModuleForm,
+    fields=['title', 'description', 'order'],
+    extra=1,
+    can_delete=True
+)

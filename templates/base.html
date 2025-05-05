@@ -52,30 +52,53 @@
                 <div class="px-4 mb-2 text-xs uppercase text-indigo-400 font-semibold">Main Navigation</div>
                 
                 <!-- Common Links -->
-                <a href="{% url 'course_list' %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'course_list' %}active-link{% endif %}">
-                    <i class="fas fa-book mr-3"></i> Browse Courses
+                <a href="{% url 'dashboard' %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'dashboard' %}active-link{% endif %}">
+                    <i class="fas fa-tachometer-alt mr-3"></i> Dashboard
                 </a>
                 
                 <!-- Role-Specific Navigation -->
                 {% if user.is_authenticated %}
-                    <a href="{% url 'student_dashboard' %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'student_dashboard' %}active-link{% endif %}">
-                        <i class="fas fa-tachometer-alt mr-3"></i> My Dashboard
+                    <!-- Quiz Navigation -->
+                    <div class="px-4 mt-6 mb-2 text-xs uppercase text-indigo-400 font-semibold">Quizzes</div>
+                    
+                    <!-- Generate Quiz -->
+                    <a href="{% url 'generate_quiz' %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'generate_quiz' %}active-link{% endif %}">
+                        <i class="fas fa-robot mr-3"></i> Generate AI Quiz
                     </a>
                     
-                    <a href="{% url 'home' %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'home' %}active-link{% endif %}">
-                        <i class="fas fa-users mr-3"></i> Community
+                    <!-- My Quizzes - Show all quizzes created by user -->
+                    <a href="{% url 'dashboard' %}" class="sidebar-link block px-4 py-2 text-sm {% if request.path == '/dashboard/' %}active-link{% endif %}">
+                        <i class="fas fa-list mr-3"></i> My Quizzes
                     </a>
                     
-                    <!-- Instructor Navigation -->
-                    {% if user.instructor_profile or user.is_staff %}
-                        <div class="px-4 mt-6 mb-2 text-xs uppercase text-indigo-400 font-semibold">Instructor Area</div>
-                        
-                        <a href="{% url 'instructor_courses' %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'instructor_courses' %}active-link{% endif %}">
-                            <i class="fas fa-chalkboard-teacher mr-3"></i> My Courses
+                    <!-- Display active quiz attempts if any -->
+                    {% for attempt in user.quiz_attempts.all %}
+                        {% if not attempt.end_time %}
+                            <a href="{% url 'take_quiz' quiz_id=attempt.quiz.id %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'take_quiz' and request.resolver_match.kwargs.quiz_id == attempt.quiz.id %}active-link{% endif %}">
+                                <i class="fas fa-hourglass-half mr-3"></i> Continue {{ attempt.quiz.title|truncatechars:20 }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- If there's a quiz_id in the URL, show quiz specific links -->
+                    {% if request.resolver_match.kwargs.quiz_id %}
+                        <a href="{% url 'quiz_detail' quiz_id=request.resolver_match.kwargs.quiz_id %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'quiz_detail' %}active-link{% endif %}">
+                            <i class="fas fa-question-circle mr-3"></i> Quiz Details
                         </a>
                         
-                        <a href="{% url 'course_create' %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'course_create' %}active-link{% endif %}">
-                            <i class="fas fa-plus-circle mr-3"></i> Create Course
+                        <a href="{% url 'take_quiz' quiz_id=request.resolver_match.kwargs.quiz_id %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'take_quiz' %}active-link{% endif %}">
+                            <i class="fas fa-play mr-3"></i> Take Quiz
+                        </a>
+                        
+                        <a href="{% url 'quiz_stats' quiz_id=request.resolver_match.kwargs.quiz_id %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'quiz_stats' %}active-link{% endif %}">
+                            <i class="fas fa-chart-bar mr-3"></i> Quiz Statistics
+                        </a>
+                    {% endif %}
+                    
+                    <!-- If there's an attempt_id in the URL, show the results link -->
+                    {% if request.resolver_match.kwargs.attempt_id %}
+                        <a href="{% url 'quiz_results' attempt_id=request.resolver_match.kwargs.attempt_id %}" class="sidebar-link block px-4 py-2 text-sm {% if request.resolver_match.url_name == 'quiz_results' %}active-link{% endif %}">
+                            <i class="fas fa-poll mr-3"></i> Quiz Results
                         </a>
                     {% endif %}
                     
@@ -88,38 +111,22 @@
                         </a>
                     {% endif %}
                 {% endif %}
-                
-                <div class="px-4 mt-6 mb-2 text-xs uppercase text-indigo-400 font-semibold">Communication</div>
-                
-                <a href="{% url 'inbox' %}" class="sidebar-link block px-4 py-2 text-sm">
-                    <i class="fas fa-envelope mr-3"></i> Messages
-                    {% if unread_message_count %}
-                        <span class="bg-red-500 text-white text-xs rounded-full px-2 ml-2">{{ unread_message_count }}</span>
-                    {% endif %}
-                </a>
-                
-                <a href="{% url 'notifications' %}" class="sidebar-link block px-4 py-2 text-sm">
-                    <i class="fas fa-bell mr-3"></i> Notifications
-                    {% if unread_notifications_count %}
-                        <span class="bg-red-500 text-white text-xs rounded-full px-2 ml-2">{{ unread_notifications_count }}</span>
-                    {% endif %}
-                </a>
             </div>
             
             <!-- Bottom Links -->
             <div class="p-4 border-t border-indigo-700">
                 {% if user.is_authenticated %}
-                    <a href="{% url 'profile' username=request.user.username %}" class="sidebar-link block px-4 py-2 text-sm">
+                    <a href="#" class="sidebar-link block px-4 py-2 text-sm">
                         <i class="fas fa-user-cog mr-3"></i> Profile Settings
                     </a>
-                    <a href="{% url 'logout' %}" class="sidebar-link block px-4 py-2 text-sm">
+                    <a href="{% url 'login' %}" class="sidebar-link block px-4 py-2 text-sm">
                         <i class="fas fa-sign-out-alt mr-3"></i> Logout
                     </a>
                 {% else %}
                     <a href="{% url 'login' %}" class="sidebar-link block px-4 py-2 text-sm">
                         <i class="fas fa-sign-in-alt mr-3"></i> Login
                     </a>
-                    <a href="{% url 'register' %}" class="sidebar-link block px-4 py-2 text-sm">
+                    <a href="#" class="sidebar-link block px-4 py-2 text-sm">
                         <i class="fas fa-user-plus mr-3"></i> Register
                     </a>
                 {% endif %}
@@ -141,30 +148,6 @@
                     
                     <!-- Right Side Actions -->
                     <div class="flex items-center space-x-4">
-                        <!-- Notifications Dropdown -->
-                        <div class="relative">
-                            <button class="text-gray-500 hover:text-gray-700 focus:outline-none">
-                                <i class="fas fa-bell"></i>
-                                {% if unread_notifications_count %}
-                                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                                        {{ unread_notifications_count }}
-                                    </span>
-                                {% endif %}
-                            </button>
-                        </div>
-                        
-                        <!-- Messages Dropdown -->
-                        <div class="relative">
-                            <button class="text-gray-500 hover:text-gray-700 focus:outline-none">
-                                <i class="fas fa-envelope"></i>
-                                {% if unread_message_count %}
-                                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                                        {{ unread_message_count }}
-                                    </span>
-                                {% endif %}
-                            </button>
-                        </div>
-                        
                         <!-- User Dropdown -->
                         <div class="relative">
                             <div class="flex items-center cursor-pointer">
@@ -189,7 +172,7 @@
                     <nav class="text-sm font-medium">
                         <ol class="list-none p-0 inline-flex">
                             <li class="flex items-center">
-                                <a href="{% url 'course_list' %}" class="text-indigo-600 hover:text-indigo-800">Home</a>
+                                <a href="{% url 'dashboard' %}" class="text-indigo-600 hover:text-indigo-800">Dashboard</a>
                                 <span class="mx-2 text-gray-500">/</span>
                             </li>
                             {% block breadcrumbs %}{% endblock %}
@@ -253,36 +236,61 @@
                 </div>
             </div>
             
-            <!-- Mobile Navigation Links - Same as desktop sidebar -->
+            <!-- Mobile Navigation Links -->
             <div class="py-4">
                 <div class="px-4 mb-2 text-xs uppercase text-indigo-400 font-semibold">Main Navigation</div>
                 
-                <!-- Same links as desktop sidebar -->
-                <a href="{% url 'course_list' %}" class="sidebar-link block px-4 py-2 text-sm">
-                    <i class="fas fa-book mr-3"></i> Browse Courses
+                <!-- Common Links -->
+                <a href="{% url 'dashboard' %}" class="sidebar-link block px-4 py-2 text-sm">
+                    <i class="fas fa-tachometer-alt mr-3"></i> Dashboard
                 </a>
                 
                 {% if user.is_authenticated %}
-                    <a href="{% url 'student_dashboard' %}" class="sidebar-link block px-4 py-2 text-sm">
-                        <i class="fas fa-tachometer-alt mr-3"></i> My Dashboard
+                    <!-- Mobile Quiz Navigation -->
+                    <div class="px-4 mt-6 mb-2 text-xs uppercase text-indigo-400 font-semibold">Quizzes</div>
+                    
+                    <!-- Generate Quiz -->
+                    <a href="{% url 'generate_quiz' %}" class="sidebar-link block px-4 py-2 text-sm">
+                        <i class="fas fa-robot mr-3"></i> Generate AI Quiz
                     </a>
                     
-                    <a href="{% url 'home' %}" class="sidebar-link block px-4 py-2 text-sm">
-                        <i class="fas fa-users mr-3"></i> Community
+                    <!-- My Quizzes -->
+                    <a href="{% url 'dashboard' %}" class="sidebar-link block px-4 py-2 text-sm">
+                        <i class="fas fa-list mr-3"></i> My Quizzes
                     </a>
                     
-                    {% if user.instructor_profile or user.is_staff %}
-                        <div class="px-4 mt-6 mb-2 text-xs uppercase text-indigo-400 font-semibold">Instructor Area</div>
-                        
-                        <a href="{% url 'instructor_courses' %}" class="sidebar-link block px-4 py-2 text-sm">
-                            <i class="fas fa-chalkboard-teacher mr-3"></i> My Courses
+                    <!-- Active quiz attempts -->
+                    {% for attempt in user.quiz_attempts.all %}
+                        {% if not attempt.end_time %}
+                            <a href="{% url 'take_quiz' quiz_id=attempt.quiz.id %}" class="sidebar-link block px-4 py-2 text-sm">
+                                <i class="fas fa-hourglass-half mr-3"></i> Continue {{ attempt.quiz.title|truncatechars:20 }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- Quiz specific links -->
+                    {% if request.resolver_match.kwargs.quiz_id %}
+                        <a href="{% url 'quiz_detail' quiz_id=request.resolver_match.kwargs.quiz_id %}" class="sidebar-link block px-4 py-2 text-sm">
+                            <i class="fas fa-question-circle mr-3"></i> Quiz Details
                         </a>
                         
-                        <a href="{% url 'course_create' %}" class="sidebar-link block px-4 py-2 text-sm">
-                            <i class="fas fa-plus-circle mr-3"></i> Create Course
+                        <a href="{% url 'take_quiz' quiz_id=request.resolver_match.kwargs.quiz_id %}" class="sidebar-link block px-4 py-2 text-sm">
+                            <i class="fas fa-play mr-3"></i> Take Quiz
+                        </a>
+                        
+                        <a href="{% url 'quiz_stats' quiz_id=request.resolver_match.kwargs.quiz_id %}" class="sidebar-link block px-4 py-2 text-sm">
+                            <i class="fas fa-chart-bar mr-3"></i> Quiz Statistics
                         </a>
                     {% endif %}
                     
+                    <!-- Quiz results link -->
+                    {% if request.resolver_match.kwargs.attempt_id %}
+                        <a href="{% url 'quiz_results' attempt_id=request.resolver_match.kwargs.attempt_id %}" class="sidebar-link block px-4 py-2 text-sm">
+                            <i class="fas fa-poll mr-3"></i> Quiz Results
+                        </a>
+                    {% endif %}
+                    
+                    <!-- Admin Area -->
                     {% if user.is_staff %}
                         <div class="px-4 mt-6 mb-2 text-xs uppercase text-indigo-400 font-semibold">Admin Area</div>
                         
@@ -291,38 +299,22 @@
                         </a>
                     {% endif %}
                 {% endif %}
-                
-                <div class="px-4 mt-6 mb-2 text-xs uppercase text-indigo-400 font-semibold">Communication</div>
-                
-                <a href="{% url 'inbox' %}" class="sidebar-link block px-4 py-2 text-sm">
-                    <i class="fas fa-envelope mr-3"></i> Messages
-                    {% if unread_message_count %}
-                        <span class="bg-red-500 text-white text-xs rounded-full px-2 ml-2">{{ unread_message_count }}</span>
-                    {% endif %}
-                </a>
-                
-                <a href="{% url 'notifications' %}" class="sidebar-link block px-4 py-2 text-sm">
-                    <i class="fas fa-bell mr-3"></i> Notifications
-                    {% if unread_notifications_count %}
-                        <span class="bg-red-500 text-white text-xs rounded-full px-2 ml-2">{{ unread_notifications_count }}</span>
-                    {% endif %}
-                </a>
             </div>
             
             <!-- Mobile Bottom Links -->
             <div class="p-4 border-t border-indigo-700">
                 {% if user.is_authenticated %}
-                    <a href="{% url 'profile' username=request.user.username %}" class="sidebar-link block px-4 py-2 text-sm">
+                    <a href="#" class="sidebar-link block px-4 py-2 text-sm">
                         <i class="fas fa-user-cog mr-3"></i> Profile Settings
                     </a>
-                    <a href="{% url 'logout' %}" class="sidebar-link block px-4 py-2 text-sm">
+                    <a href="{% url 'login' %}" class="sidebar-link block px-4 py-2 text-sm">
                         <i class="fas fa-sign-out-alt mr-3"></i> Logout
                     </a>
                 {% else %}
                     <a href="{% url 'login' %}" class="sidebar-link block px-4 py-2 text-sm">
                         <i class="fas fa-sign-in-alt mr-3"></i> Login
                     </a>
-                    <a href="{% url 'register' %}" class="sidebar-link block px-4 py-2 text-sm">
+                    <a href="#" class="sidebar-link block px-4 py-2 text-sm">
                         <i class="fas fa-user-plus mr-3"></i> Register
                     </a>
                 {% endif %}

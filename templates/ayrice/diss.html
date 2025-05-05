@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About - My System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .info {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>About This System</h1>
+    <p>This page gives you details about the system you're using.</p>
+
+    <div class="info">
+      <h3>System Information:</h3>
+      <ul>
+        <li><strong>System Name:</strong> <span id="systemName"></span></li>
+        <li><strong>Version:</strong> <span id="version"></span></li>
+        <li><strong>Developer:</strong> <span id="developer"></span></li>
+        <li><strong>Year:</strong> <span id="year"></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Simulate dynamic system data
+    const systemInfo = {
+      systemName: "Inventory Management System",
+      version: "1.2.3",
+      developer: "Tech Solutions Inc.",
+      year: new Date().getFullYear()
+    };
+
+    // Populate the page with system info
+    document.getElementById("systemName").textContent = systemInfo.systemName;
+    document.getElementById("version").textContent = systemInfo.version;
+    document.getElementById("developer").textContent = systemInfo.developer;
+    document.getElementById("year").textContent = systemInfo.year;
+  </script>
+</body>
+</html>

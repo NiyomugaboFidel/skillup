@@ -1,0 +1,217 @@
+{% extends 'quiz/base.html' %}
+
+{% load static %}
+
+{% block title %}{{ quiz.title }} | Quiz Statistics{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <!-- Header with Navigation -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Quiz Statistics</h1>
+            <p class="text-gray-600 mt-1">{{ quiz.title }}</p>
+        </div>
+        <div class="mt-4 md:mt-0 space-x-2">
+            <a href="{% url 'quiz_detail' quiz.id %}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Quiz
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Total Attempts -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Attempts</p>
+                    <p class="text-2xl font-semibold text-gray-800">{{ total_attempts }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Average Score -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Average Score</p>
+                    <p class="text-2xl font-semibold text-gray-800">{{ avg_score|floatformat:1 }}%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Questions -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Questions</p>
+                    <p class="text-2xl font-semibold text-gray-800">{{ question_stats|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- Score Distribution Chart -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Score Distribution</h2>
+            <div class="h-64">
+                <canvas id="scoreDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Question Performance Chart -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Question Performance</h2>
+            <div class="h-64">
+                <canvas id="questionPerformanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Question Stats Table -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Detailed Question Performance</h2>
+        
+        {% if question_stats %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Question</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Answers</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correct Answers</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correct %</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for stat in question_stats %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-4 px-4">
+                            <div class="line-clamp-2">{{ stat.question.text }}</div>
+                        </td>
+                        <td class="py-4 px-4">{{ stat.total_answers }}</td>
+                        <td class="py-4 px-4">{{ stat.correct_answers }}</td>
+                        <td class="py-4 px-4">
+                            <div class="flex items-center">
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2 max-w-[100px]">
+                                    <div class="bg-{% if stat.correct_percentage >= 70 %}green{% elif stat.correct_percentage >= 40 %}yellow{% else %}red{% endif %}-500 h-2.5 rounded-full" style="width: {{ stat.correct_percentage }}%"></div>
+                                </div>
+                                <span>{{ stat.correct_percentage|floatformat:1 }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-gray-50 p-4 rounded-md text-center">
+            <p class="text-gray-600">No attempts have been made on this quiz yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Score Distribution Chart
+    const scoreDistributionCtx = document.getElementById('scoreDistributionChart').getContext('2d');
+    const scoreDistributionChart = new Chart(scoreDistributionCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for item in score_distribution %}'{{ item.score }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Number of Attempts',
+                data: [{% for item in score_distribution %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+
+    // Question Performance Chart
+    const questionPerformanceCtx = document.getElementById('questionPerformanceChart').getContext('2d');
+    const questionPerformanceChart = new Chart(questionPerformanceCtx, {
+        type: 'horizontalBar',
+        data: {
+            labels: [{% for stat in question_stats %}'Q{{ forloop.counter }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Correct Percentage',
+                data: [{% for stat in question_stats %}{{ stat.correct_percentage|floatformat:1 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    {% for stat in question_stats %}
+                        '{% if stat.correct_percentage >= 70 %}rgba(34, 197, 94, 0.7){% elif stat.correct_percentage >= 40 %}rgba(234, 179, 8, 0.7){% else %}rgba(239, 68, 68, 0.7){% endif %}'{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                ],
+                borderColor: [
+                    {% for stat in question_stats %}
+                        '{% if stat.correct_percentage >= 70 %}rgb(34, 197, 94){% elif stat.correct_percentage >= 40 %}rgb(234, 179, 8){% else %}rgb(239, 68, 68){% endif %}'{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.raw + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
