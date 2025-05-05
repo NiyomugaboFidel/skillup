@@ -24,3 +24,4 @@ urlpatterns = [
     path('instructor/courses/<int:pk>/modules/', views.manage_course_modules, name='manage_course_modules'),
     path('instructor/modules/<int:module_id>/contents/', views.manage_module_contents, name='manage_module_contents'),
 ]
+

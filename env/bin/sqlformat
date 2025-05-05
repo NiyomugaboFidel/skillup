@@ -1,4 +1,4 @@
-#!/home/fidele/python/socailmedia/env/bin/python3
+#!/home/fidele/python/skillup-v2/env/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

@@ -10,5 +10,8 @@ urlpatterns = [
     path('follow/<str:username>/', views.follow_user, name='follow_user'),
 
     path('login/', auth_views.LoginView.as_view(template_name='accounts/login.html'), name='login'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
+
 
 ]
+
