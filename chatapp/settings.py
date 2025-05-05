@@ -20,7 +20,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
   
     'tailwind',
-    'crispy_forms',
+    'theme',
+     "crispy_forms",
+    "crispy_tailwind",
     'widget_tweaks',
     
     'accounts',
@@ -30,7 +32,8 @@ INSTALLED_APPS = [
     'courses',
     'channels',
     'channels_redis',
-    "crispy_bootstrap5", 
+    'quiz'
+  
 ]
 
 
@@ -43,6 +46,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # "django_browser_reload.middleware.BrowserReloadMiddleware",
 ]
 
 ROOT_URLCONF = 'chatapp.urls'
@@ -108,8 +112,11 @@ LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 
 # Crispy forms configuration
+
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 CRISPY_TEMPLATE_PACK = "tailwind"
+TAILWIND_APP_NAME = 'theme'
 
 # Configure ASGI application
 ASGI_APPLICATION = 'chatapp.asgi.application'
@@ -126,5 +133,9 @@ CHANNEL_LAYERS = {
 
 
 
-CRISPY_ALLOWED_TEMPLATE_PACKS = ["bootstrap5"]
-CRISPY_TEMPLATE_PACK = "bootstrap5"
+# settings.py
+
+GEMINI_API_KEY = "AIzaSyBkIAgT8SBMwpitI-rOM-jrBLnCn2KTxf8"
+
+
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
