@@ -8,23 +8,33 @@
     <div class="w-full md:w-1/3 border-r twitter-border">
         <div class="p-4 border-b twitter-border">
             <h1 class="text-xl font-bold">Messages</h1>
+            <a href="{% url 'start_conversation' %}" class="text-sm text-blue-500 hover:underline">
+                New Message
+            </a>
         </div>
         
         <div class="overflow-y-auto" style="height: calc(100vh - 65px);">
             {% for thread in threads %}
-                {% with other_user=thread.participants.exclude.id.filter.first %}
+            {% with other_user=thread.participants.exclude(id=request.user.id).first %}
                 <a href="{% url 'thread_detail' thread_id=thread.id %}" class="block p-4 border-b twitter-border hover:bg-gray-900 transition duration-200">
                     <div class="flex items-start">
-                        <img src="{{ other_user.profile.avatar.url }}" alt="{{ other_user.username }}" class="w-12 h-12 rounded-full mr-3">
+                        {% if other_user.profile.avatar %}
+    <img src="{{ other_user.profile.avatar.url }}" alt="{{ other_user.username }}" class="w-12 h-12 rounded-full mr-3">
+{% else %}
+    <div class="w-12 h-12 rounded-full bg-gray-700 mr-3"></div>
+{% endif %}
+
                         <div>
                             <div class="flex items-center">
                                 <span class="font-bold">{{ other_user.get_full_name|default:other_user }}</span>
                                 <span class="twitter-text-light ml-1">@{{ other_user.username }}</span>
                                 <span class="twitter-text-light ml-1">·</span>
-                                <span class="twitter-text-light ml-1">{{ thread.updated_at|timesince }}</span>
+                                <span class="twitter-text-light ">{{ thread.updated_at|timesince }}ago</span>
                             </div>
+                            <span class="ml-2 inline-block w-2 h-2 rounded-full bg-green-500" title="Online"></span>
+
                             <div class="mt-1 twitter-text-light">
-                                {{ thread.messages.last.content|truncatechars:50 }}
+                                {{ thread.messages.last.content|default:"(No message)"|truncatechars:50 }}
                             </div>
                         </div>
                     </div>
@@ -43,6 +53,9 @@
     <div class="text-center">
         <div class="text-2xl font-bold mb-2">Select a message</div>
         <p class="twitter-text-light">Choose from your existing conversations or start a new one.</p>
+        <a href="{% url 'start_conversation' %}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+            Start New Chat
+        </a>
     </div>
 </div>
 </div>
