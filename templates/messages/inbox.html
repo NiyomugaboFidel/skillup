@@ -31,6 +31,8 @@
                                 <span class="twitter-text-light ml-1">·</span>
                                 <span class="twitter-text-light ">{{ thread.updated_at|timesince }}ago</span>
                             </div>
+                            <span class="ml-2 inline-block w-2 h-2 rounded-full bg-green-500" title="Online"></span>
+
                             <div class="mt-1 twitter-text-light">
                                 {{ thread.messages.last.content|default:"(No message)"|truncatechars:50 }}
                             </div>
@@ -51,6 +53,9 @@
     <div class="text-center">
         <div class="text-2xl font-bold mb-2">Select a message</div>
         <p class="twitter-text-light">Choose from your existing conversations or start a new one.</p>
+        <a href="{% url 'start_conversation' %}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+            Start New Chat
+        </a>
     </div>
 </div>
 </div>
