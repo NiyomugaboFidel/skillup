@@ -3,81 +3,73 @@
 {% block title %}Take Quiz: {{ quiz.title }} - Quiz App{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ quiz.title }}</h1>
-    <p class="text-gray-600">
-        {{ quiz.description }}
-        {% if quiz.is_ai_generated %}
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">
-            AI Generated
-        </span>
-        {% endif %}
-    </p>
+<div class="mb-10">
+  <h1 class="text-3xl font-bold text-gray-900">{{ quiz.title }}</h1>
+  <p class="text-gray-600 mt-1">
+    {{ quiz.description }}
+    {% if quiz.is_ai_generated %}
+      <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        AI Generated
+      </span>
+    {% endif %}
+  </p>
 </div>
 
-<div class="bg-white shadow-md rounded-lg p-6">
-    <form method="post">
-        {% csrf_token %}
-        
-        <div class="space-y-8">
-            {% for field in form %}
-                <div class="border-b pb-6">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-medium text-gray-900">{{ field.label }}</h3>
-                    </div>
-                    
-                    <div class="space-y-2">
-                        {% for choice in field %}
-                            <div class="flex items-center">
-                                {{ choice.tag }}
-                                <label for="{{ choice.id_for_label }}" class="ml-3 block text-gray-700">
-                                    {{ choice.choice_label }}
-                                </label>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    
-                    {% if field.errors %}
-                        <p class="text-red-500 text-sm mt-2">{{ field.errors.0 }}</p>
-                    {% endif %}
-                </div>
+<div class="bg-white shadow-lg rounded-lg p-6 border border-gray-100">
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="space-y-10">
+      {% for field in form %}
+        <div class="border-b pb-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">{{ field.label }}</h3>
+
+          <div class="space-y-3">
+            {% for choice in field %}
+              <div class="flex items-center space-x-3">
+                {{ choice.tag }}
+                <label for="{{ choice.id_for_label }}" class="text-gray-700 text-sm">{{ choice.choice_label }}</label>
+              </div>
             {% endfor %}
+          </div>
+
+          {% if field.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ field.errors.0 }}</p>
+          {% endif %}
         </div>
-        
-        <div class="mt-8 flex justify-end">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md text-sm font-medium">
-                Submit Quiz
-            </button>
-        </div>
-    </form>
+      {% endfor %}
+    </div>
+
+    <div class="mt-10 flex justify-end">
+      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-6 py-3 rounded-md shadow">
+        Submit Quiz
+      </button>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Style Django form elements with Tailwind
-    document.addEventListener('DOMContentLoaded', function() {
-        // Style radio inputs
-        const radioInputs = document.querySelectorAll('input[type="radio"]');
-        radioInputs.forEach(input => {
-            input.className = 'focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300';
-        });
+  // Apply Tailwind classes to radio buttons
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('input[type="radio"]').forEach(input => {
+      input.className = 'focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300';
     });
-    
-    // Track time spent on quiz
-    const startTime = new Date();
-    
-    // Warning before navigating away
-    window.addEventListener('beforeunload', function(e) {
-        // Cancel the event
-        e.preventDefault();
-        // Chrome requires returnValue to be set
-        e.returnValue = '';
-    });
-    
-    // Remove warning when form is submitted
-    document.querySelector('form').addEventListener('submit', function() {
-        window.removeEventListener('beforeunload', function() {});
-    });
+  });
+
+  // Quiz timer logic
+  const startTime = new Date();
+
+  // Confirm before user leaves
+  window.addEventListener('beforeunload', function (e) {
+    e.preventDefault();
+    e.returnValue = '';
+  });
+
+  // Remove warning when form is submitted
+  document.querySelector('form').addEventListener('submit', function () {
+    window.removeEventListener('beforeunload', () => {});
+  });
 </script>
 {% endblock %}

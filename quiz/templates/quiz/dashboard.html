@@ -3,78 +3,89 @@
 {% block title %}Dashboard - Quiz App{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900 mb-2">Your Dashboard</h1>
-    <p class="text-gray-600">Welcome to your quiz dashboard. Generate new quizzes or view your previous attempts.</p>
+<div class="mb-10">
+  <h1 class="text-3xl font-bold text-gray-900">Welcome, {{ request.user.first_name|default:request.user.username }}</h1>
+  <p class="text-gray-600 mt-1">Easily manage your quizzes and track your learning progress.</p>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-    <!-- Quizzes Created -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-gray-800">Your Quizzes</h2>
-            <a href="{% url 'generate_quiz' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                Create New Quiz
-            </a>
-        </div>
-        
-        {% if user_quizzes %}
-            <div class="space-y-4">
-                {% for quiz in user_quizzes %}
-                    <div class="border-l-4 border-indigo-500 pl-4 py-2">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h3 class="font-medium text-gray-900">{{ quiz.title }}</h3>
-                                <p class="text-sm text-gray-500">Created: {{ quiz.created_at|date:"M d, Y" }} | Questions: {{ quiz.question_count }}</p>
-                                {% if quiz.is_ai_generated %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        AI Generated
-                                    </span>
-                                {% endif %}
-                            </div>
-                            <div class="flex space-x-2">
-                                <a href="{% url 'quiz_detail' quiz.id %}" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">View</a>
-                                <a href="{% url 'quiz_stats' quiz.id %}" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">Stats</a>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="text-center py-8">
-                <p class="text-gray-500">You haven't created any quizzes yet.</p>
-                <a href="{% url 'generate_quiz' %}" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Generate Your First Quiz
-                </a>
-            </div>
-        {% endif %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <!-- Your Quizzes Section -->
+  <section class="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-800">Your Quizzes</h2>
+        <p class="text-sm text-gray-500">Create and manage your quizzes.</p>
+      </div>
+      <a href="{% url 'generate_quiz' %}" class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm">
+        + New Quiz
+      </a>
     </div>
-    
-    <!-- Quiz Attempts -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Quiz Attempts</h2>
-        
-        {% if user_attempts %}
-            <div class="space-y-4">
-                {% for attempt in user_attempts %}
-                    <div class="border-l-4 {% if attempt.score_percentage >= 80 %}border-green-500{% elif attempt.score_percentage >= 60 %}border-yellow-500{% else %}border-red-500{% endif %} pl-4 py-2">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h3 class="font-medium text-gray-900">{{ attempt.quiz.title }}</h3>
-                                <p class="text-sm text-gray-500">
-                                    {{ attempt.end_time|date:"M d, Y H:i" }} | 
-                                    Score: {{ attempt.score }}/{{ attempt.max_score }} 
-                                    ({{ attempt.score_percentage|floatformat:1 }}%)
-                                </p>
-                            </div>
-                            <a href="{% url 'quiz_results' attempt.id %}" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">Results</a>
-                        </div>
-                    </div>
-                {% endfor %}
+
+    {% if user_quizzes %}
+      <div class="space-y-4">
+        {% for quiz in user_quizzes %}
+          <div class="border border-gray-200 rounded-lg p-4 hover:shadow transition">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="font-semibold text-gray-900">{{ quiz.title }}</h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  Created on {{ quiz.created_at|date:"M d, Y" }} · {{ quiz.question_count }} questions
+                </p>
+                {% if quiz.is_ai_generated %}
+                  <span class="mt-2 inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">AI Generated</span>
+                {% endif %}
+              </div>
+              <div class="flex gap-3 text-sm">
+                <a href="{% url 'quiz_detail' quiz.id %}" class="text-indigo-600 hover:underline">View</a>
+                <a href="{% url 'quiz_stats' quiz.id %}" class="text-indigo-600 hover:underline">Stats</a>
+              </div>
             </div>
-        {% else %}
-            <p class="text-center text-gray-500 py-8">You haven't attempted any quizzes yet.</p>
-        {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-12">
+        <p class="text-gray-500 mb-4">You haven't created any quizzes yet.</p>
+        <a href="{% url 'generate_quiz' %}" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md shadow-sm">
+          Generate Your First Quiz
+        </a>
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Quiz Attempts Section -->
+  <section class="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold text-gray-800">Recent Attempts</h2>
+      <p class="text-sm text-gray-500">Track your latest quiz scores and progress.</p>
     </div>
+
+    {% if user_attempts %}
+      <div class="space-y-4">
+        {% for attempt in user_attempts %}
+          <div class="border-l-4 
+                      {% if attempt.score_percentage >= 80 %}border-green-500
+                      {% elif attempt.score_percentage >= 60 %}border-yellow-500
+                      {% else %}border-red-500{% endif %}
+                      bg-gray-50 p-4 rounded-r-lg">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="font-medium text-gray-900">{{ attempt.quiz.title }}</h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  {{ attempt.end_time|date:"M d, Y H:i" }} · 
+                  {{ attempt.score }}/{{ attempt.max_score }} ({{ attempt.score_percentage|floatformat:1 }}%)
+                </p>
+              </div>
+              <a href="{% url 'quiz_results' attempt.id %}" class="text-indigo-600 hover:underline text-sm font-medium">Results</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-12">
+        <p class="text-gray-500">You haven't attempted any quizzes yet.</p>
+      </div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
