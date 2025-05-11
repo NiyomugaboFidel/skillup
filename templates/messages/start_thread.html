@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load widget_tweaks %}
 
 {% block title %}New Message | ChatApp{% endblock %}
 
@@ -19,17 +20,30 @@
 
         <form method="post" enctype="multipart/form-data" class="space-y-4">
             {% csrf_token %}
-
             <div>
                 {{ form.content|add_class:"w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2" }}
             </div>
 
-            <div class="flex items-center justify-between">
-                <div class="relative">
-                    <label for="id_image" class="cursor-pointer text-blue-500 hover:text-blue-600 flex items-center">
-                        <i class="far fa-image text-xl mr-1"></i> Attach
+            <div class="flex items-center justify-between mt-4">
+                <div class="relative flex items-center">
+                    <label for="id_image" class="cursor-pointer text-blue-500 hover:text-blue-600">
+                        <i class="far fa-image text-xl mr-1"></i> Attach Image
                     </label>
                     {{ form.image|add_class:"hidden" }}
+                </div>
+                
+                
+                <div class="relative">
+                    <button type="button" id="emoji-btn" class="text-blue-500 hover:text-blue-600">
+                        <i class="far fa-smile text-xl"></i>
+                    </button>
+                    <div id="emoji-picker" class="absolute hidden z-10 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg">
+                        <button type="button" class="p-2 hover:bg-gray-100" data-emoji="😊">😊</button>
+                        <button type="button" class="p-2 hover:bg-gray-100" data-emoji="😂">😂</button>
+                        <button type="button" class="p-2 hover:bg-gray-100" data-emoji="❤️">❤️</button>
+                        <button type="button" class="p-2 hover:bg-gray-100" data-emoji="👍">👍</button>
+                        <button type="button" class="p-2 hover:bg-gray-100" data-emoji="😎">😎</button>
+                    </div>
                 </div>
 
                 <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full transition duration-150">
@@ -37,6 +51,71 @@
                 </button>
             </div>
         </form>
+
+        
+        <div id="char-count" class="mt-2 text-sm text-gray-500">Characters left: 500</div>
     </div>
 </div>
+
+<script>
+    
+    document.getElementById('emoji-btn').addEventListener('click', function() {
+        const emojiPicker = document.getElementById('emoji-picker');
+        emojiPicker.classList.toggle('hidden');
+    });
+
+    
+    const emojiButtons = document.querySelectorAll('#emoji-picker button');
+    emojiButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const emoji = this.getAttribute('data-emoji');
+            const textarea = document.querySelector('textarea[name="content"]');
+            textarea.value += emoji;
+            document.getElementById('emoji-picker').classList.add('hidden');
+            updateCharCount();
+        });
+    });
+
+    
+    const textarea = document.querySelector('textarea[name="content"]');
+    textarea.addEventListener('input', function() {
+        updateCharCount();
+    });
+
+    function updateCharCount() {
+        const charCountElement = document.getElementById('char-count');
+        const maxChars = 500;
+        const currentLength = textarea.value.length;
+        const remainingChars = maxChars - currentLength;
+        charCountElement.textContent = `Characters left: ${remainingChars}`;
+        if (remainingChars < 0) {
+            charCountElement.classList.add('text-red-500');
+        } else {
+            charCountElement.classList.remove('text-red-500');
+        }
+    }
+
+    
+    const form = document.querySelector('form');
+    form.addEventListener('input', debounce(function() {
+        localStorage.setItem('message-draft', textarea.value);
+    }, 1000));
+
+    window.addEventListener('load', function() {
+        const savedDraft = localStorage.getItem('message-draft');
+        if (savedDraft) {
+            textarea.value = savedDraft;
+            updateCharCount();
+        }
+    });
+
+    function debounce(func, wait) {
+        let timeout;
+        return function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(func, wait);
+        };
+    }
+</script>
+
 {% endblock %}
