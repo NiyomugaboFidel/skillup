@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Quiz App{% endblock %}</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js for stats -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+  <!-- Header / Navbar -->
+  <header class="bg-indigo-700 text-white shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <!-- Branding -->
+        <div class="flex items-center space-x-4">
+          <span class="text-2xl font-bold tracking-tight">Quiz App</span>
+          <nav class="hidden md:flex space-x-4">
+            <a href="{% url 'dashboard' %}" class="hover:underline hover:text-indigo-200 text-sm font-medium">Dashboard</a>
+            <a href="{% url 'generate_quiz' %}" class="hover:underline hover:text-indigo-200 text-sm font-medium">Generate Quiz</a>
+          </nav>
+        </div>
+
+        <!-- Right-side placeholder (e.g., user, logout) -->
+        <div class="hidden md:flex items-center space-x-4">
+          {% if user.is_authenticated %}
+            <span class="text-sm font-medium">Hi, {{ user.first_name|default:user.username }}</span>
+            <a href="{% url 'logout' %}" class="text-sm bg-white text-indigo-700 px-3 py-1 rounded hover:bg-indigo-100 font-medium transition">Logout</a>
+          {% else %}
+            <a href="{% url 'login' %}" class="text-sm font-medium hover:underline">Login</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Flash messages -->
+  {% if messages %}
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+    {% for message in messages %}
+    <div class="rounded p-4 mb-4 border-l-4 
+      {% if message.tags == 'error' %}
+        bg-red-100 border-red-600 text-red-800
+      {% elif message.tags == 'success' %}
+        bg-green-100 border-green-600 text-green-800
+      {% else %}
+        bg-blue-100 border-blue-600 text-blue-800
+      {% endif %}
+    " role="alert">
+      <p class="text-sm font-medium">{{ message }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Main content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-indigo-800 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      <p class="text-sm">&copy; 2025 Quiz App. All rights reserved.</p>
+      <p class="text-sm text-indigo-200">Built with ❤️ using Django + Tailwind CSS</p>
+    </div>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
