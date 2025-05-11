@@ -12,7 +12,7 @@
         
         <div class="overflow-y-auto" style="height: calc(100vh - 65px);">
             {% for thread in threads %}
-                {% with other_user=thread.participants.exclude.id.filter.first %}
+            {% with other_user=thread.participants.exclude(id=request.user.id).first %}
                 <a href="{% url 'thread_detail' thread_id=thread.id %}" class="block p-4 border-b twitter-border hover:bg-gray-900 transition duration-200">
                     <div class="flex items-start">
                         <img src="{{ other_user.profile.avatar.url }}" alt="{{ other_user.username }}" class="w-12 h-12 rounded-full mr-3">
