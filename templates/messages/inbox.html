@@ -29,7 +29,7 @@
                                 <span class="twitter-text-light ml-1">{{ thread.updated_at|timesince }}</span>
                             </div>
                             <div class="mt-1 twitter-text-light">
-                                {{ thread.messages.last.content|truncatechars:50 }}
+                                {{ thread.messages.last.content|default:"(No message)"|truncatechars:50 }}
                             </div>
                         </div>
                     </div>
