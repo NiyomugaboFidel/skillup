@@ -1,40 +1,42 @@
-
 {% extends 'base.html' %}
 
 {% block title %}New Message | ChatApp{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-<div class="p-4 border-b twitter-border">
-    <h1 class="text-xl font-bold">New Message</h1>
-</div>
-
-<div class="p-4">
-    <div class="flex items-center mb-4">
-        <img src="{{ recipient.profile.avatar.url }}" alt="{{ recipient.username }}" class="w-12 h-12 rounded-full mr-3">
-        <div>
-            <div class="font-bold">{{ recipient.get_full_name|default:recipient.username }}</div>
-            <div class="twitter-text-light">@{{ recipient.username }}</div>
-        </div>
+<div class="max-w-2xl mx-auto bg-white shadow rounded-lg mt-6">
+    <div class="p-4 border-b border-gray-200">
+        <h1 class="text-2xl font-semibold text-gray-800">New Message</h1>
     </div>
-    
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="mb-4">
-            {{ form.content }}
-        </div>
-        <div class="flex items-center justify-between">
+
+    <div class="p-4">
+        <div class="flex items-center mb-6">
+            <img src="{{ recipient.profile.avatar.url }}" alt="{{ recipient.username }}" class="w-12 h-12 rounded-full mr-4 object-cover">
             <div>
-                <label for="id_image" class="cursor-pointer text-blue-400">
-                    <i class="far fa-image"></i>
-                </label>
-                {{ form.image }}
+                <p class="font-semibold text-gray-900">{{ recipient.get_full_name|default:recipient.username }}</p>
+                <p class="text-sm text-gray-500">@{{ recipient.username }}</p>
             </div>
-            <button type="submit" class="twitter-blue hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full">
-                Send
-            </button>
         </div>
-    </form>
-</div>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+                {{ form.content|add_class:"w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2" }}
+            </div>
+
+            <div class="flex items-center justify-between">
+                <div class="relative">
+                    <label for="id_image" class="cursor-pointer text-blue-500 hover:text-blue-600 flex items-center">
+                        <i class="far fa-image text-xl mr-1"></i> Attach
+                    </label>
+                    {{ form.image|add_class:"hidden" }}
+                </div>
+
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full transition duration-150">
+                    Send
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
