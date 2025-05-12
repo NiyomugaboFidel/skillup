@@ -1,0 +1,290 @@
+<style>
+    /* Add these new styles below existing CSS */
+    
+    /* About Section */
+    .about-section {
+        padding: 6rem 5%;
+        background: var(--bg-light);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        align-items: center;
+    }
+
+    .about-image {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+    }
+
+    .about-image img {
+        width: 100%;
+        height: auto;
+    }
+
+    .about-content h3 {
+        font-size: 2.2rem;
+        color: var(--primary-blue);
+        margin-bottom: 1.5rem;
+    }
+
+    /* Working Process */
+    .process-steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 3rem;
+        margin-top: 4rem;
+    }
+
+    .process-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        transition: transform 0.3s;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .process-card:hover {
+        transform: translateY(-10px);
+    }
+
+    .process-icon {
+        width: 80px;
+        height: 80px;
+        background: var(--accent-teal);
+        border-radius: 50%;
+        margin: 0 auto 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        color: white;
+    }
+
+    /* Portfolio Section */
+    .portfolio-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+    }
+
+    .portfolio-item {
+        position: relative;
+        border-radius: 15px;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .portfolio-item img {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+
+    .portfolio-item:hover img {
+        transform: scale(1.1);
+    }
+
+    .portfolio-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(3,4,94,0.8));
+        color: white;
+        padding: 2rem 1.5rem;
+    }
+
+    /* Testimonials Section */
+    .testimonials-section {
+        background: var(--primary-blue);
+        padding: 6rem 5%;
+    }
+
+    .testimonial-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin: 1rem;
+        position: relative;
+    }
+
+    .testimonial-quote {
+        font-size: 3rem;
+        color: var(--accent-teal);
+        position: absolute;
+        top: -20px;
+        left: 20px;
+        opacity: 0.3;
+    }
+
+    .testimonial-author {
+        display: flex;
+        align-items: center;
+        margin-top: 1.5rem;
+    }
+
+    .author-image {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        margin-right: 1rem;
+    }
+
+    /* Blog Section */
+    .blog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+    }
+
+    .blog-card {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+    }
+
+    .blog-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .blog-image {
+        height: 200px;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+    }
+
+    .blog-date {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: var(--accent-teal);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 5px;
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+        .about-section {
+            grid-template-columns: 1fr;
+        }
+        
+        .process-steps {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<!-- Add these sections before the contact section -->
+
+<section id="about" class="section about-section">
+    <div class="about-image">
+        <img src="https://images.unsplash.com/photo-1584432810601-6c7f27d2362b" alt="Medical Team">
+    </div>
+    <div class="about-content">
+        <h3>Your Health is Our Priority</h3>
+        <p>At Ultracare, we combine cutting-edge technology with compassionate care to deliver exceptional medical services. Our team of certified professionals is dedicated to providing personalized healthcare solutions.</p>
+        <ul class="about-list">
+            <li><i class="fas fa-check-circle" style="color: var(--accent-teal);"></i> 24/7 Emergency Services</li>
+            <li><i class="fas fa-check-circle" style="color: var(--accent-teal);"></i> Certified Medical Professionals</li>
+            <li><i class="fas fa-check-circle" style="color: var(--accent-teal);"></i> Advanced Diagnostic Facilities</li>
+        </ul>
+        <button class="cta-button" style="margin-top: 1.5rem;">Learn More</button>
+    </div>
+</section>
+
+<section class="section" id="process">
+    <div class="section-title">
+        <h2>Our Working Process</h2>
+        <p>Simple steps to better health</p>
+    </div>
+    <div class="process-steps">
+        <div class="process-card">
+            <div class="process-icon">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <h3>Book Appointment</h3>
+            <p>Easy online scheduling with instant confirmation</p>
+        </div>
+        <div class="process-card">
+            <div class="process-icon">
+                <i class="fas fa-user-md"></i>
+            </div>
+            <h3>Consult Doctor</h3>
+            <p>Video or in-person consultation with specialists</p>
+        </div>
+        <div class="process-card">
+            <div class="process-icon">
+                <i class="fas fa-prescription-bottle-alt"></i>
+            </div>
+            <h3>Receive Treatment</h3>
+            <p>Personalized care plan and follow-up support</p>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="portfolio">
+    <div class="section-title">
+        <h2>Our Portfolio</h2>
+        <p>See our healthcare achievements</p>
+    </div>
+    <div class="portfolio-grid">
+        <div class="portfolio-item">
+            <img src="https://images.unsplash.com/photo-1582053433976-25c00369fc93" alt="Cardiology">
+            <div class="portfolio-overlay">
+                <h4>Cardiology Success</h4>
+                <p>98% success rate in heart surgeries</p>
+            </div>
+        </div>
+        <!-- Add more portfolio items -->
+    </div>
+</section>
+
+<section class="section testimonials-section">
+    <div class="section-title" style="color: white;">
+        <h2>Patient Testimonials</h2>
+        <p>Hear from those we've helped</p>
+    </div>
+    <div class="process-steps">
+        <div class="testimonial-card">
+            <div class="testimonial-quote">“</div>
+            <p>The care I received at Ultracare was exceptional. Quick diagnosis and professional treatment.</p>
+            <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" class="author-image" alt="Patient">
+                <div>
+                    <h4>Marie Claire</h4>
+                    <p>Cardiology Patient</p>
+                </div>
+            </div>
+        </div>
+        <!-- Add more testimonials -->
+    </div>
+</section>
+
+<section class="section" id="blog">
+    <div class="section-title">
+        <h2>Latest Medical Insights</h2>
+        <p>Stay updated with health news</p>
+    </div>
+    <div class="blog-grid">
+        <div class="blog-card">
+            <div class="blog-image" style="background-image: url('https://images.unsplash.com/photo-1487611459768-bd414656ea10')">
+                <div class="blog-date">Mar 15, 2024</div>
+            </div>
+            <div class="blog-content" style="padding: 1.5rem;">
+                <h3>Preventive Care Strategies</h3>
+                <p>Learn how regular check-ups can prevent serious health issues</p>
+                <a href="#" style="color: var(--accent-teal); text-decoration: none; font-weight: 500;">Read More →</a>
+            </div>
+        </div>
+        <!-- Add more blog posts -->
+    </div>
+</section>

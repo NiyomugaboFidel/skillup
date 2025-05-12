@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor - Medically</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sen:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Sen', sans-serif;
+      background-color: #fff;
+      color: #1e1e1e;
+    }
+    .nav {
+      background: white;
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem 3rem;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+    .nav a {
+      margin: 0 1rem;
+      text-decoration: none;
+      color: #1e1e1e;
+      font-weight: 500;
+    }
+    .nav strong {
+      font-size: 1.5rem;
+      color: #0b5ed7;
+    }
+    header {
+        background: linear-gradient(rgba(3,4,94,0.85), rgba(3,4,94,0.85)),
+                    url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+        background-size: cover;
+      height: 400px;
+      color: white;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    header h1 {
+      font-size: 3rem;
+      font-weight: 700;
+    }
+    header p {
+      margin-top: 10px;
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+    .doctor-grid {
+      background: white;
+      padding: 4rem 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 3rem;
+    }
+    .doctor {
+      width: 200px;
+      text-align: center;
+    }
+    .doctor img {
+      border-radius: 50%;
+      width: 100%;
+      border: 8px solid #007bff;
+    }
+    .doctor div {
+      margin-top: 1rem;
+    }
+    .doctor strong {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0b2c61;
+    }
+    .doctor small {
+      display: block;
+      color: #007bff;
+      margin-top: 0.25rem;
+    }
+    .consultation {
+      background: #007bff;
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+      border-radius: 2rem;
+      margin: 3rem auto;
+      max-width: 1000px;
+    }
+    .consultation h2 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      font-family: 'Sen', sans-serif;
+    }
+    .consultation p {
+      margin-bottom: 1.5rem;
+      font-family: 'Sen', sans-serif;
+    }
+    .consultation input {
+      padding: 0.75rem;
+      margin: 0.5rem;
+      width: 200px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Sen', sans-serif;
+    }
+    .consultation button {
+      padding: 0.75rem 1rem;
+      background: white;
+      color: #007bff;
+      border: none;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: 'Sen', sans-serif;
+    }
+    footer {
+      background: #f9fafc;
+      padding: 4rem 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    footer div {
+      flex: 1 1 200px;
+      margin: 1rem;
+    }
+    footer h3, footer h4 {
+      color: #0b2c61;
+      margin-bottom: 1rem;
+      font-family: 'Sen', sans-serif;
+    }
+    .social-icons i {
+      margin-right: 10px;
+      color: #007bff;
+    }
+    footer p {
+      color: #333;
+      font-family: 'Sen', sans-serif;
+    }
+    footer a {
+      text-decoration: none;
+      color: #0b5ed7;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <div><strong>🩺 Medically</strong></div>
+    <div>
+      <a href="#">Home</a>
+      <a href="#">About</a>
+      <a href="#">Pages</a>
+      <a href="#">Services</a>
+      <a href="#">Portfolio</a>
+      <a href="#">Blog</a>
+      <a href="#">Contact</a>
+    </div>
+  </div>
+
+  <header>
+    <h1>Doctor</h1>
+    <p>Home &gt; Doctor</p>
+  </header>
+
+  <section class="doctor-grid">
+    <div class="doctor">
+      <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Marlene Henry">
+      <div><strong>Marlene Henry</strong><small>Surgeon</small></div>
+    </div>
+    <div class="doctor">
+      <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Dianne Russell">
+      <div><strong>Dianne Russell</strong><small>Cardiologist</small></div>
+    </div>
+    <div class="doctor">
+      <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Jerome Bell">
+      <div><strong>Jerome Bell</strong><small>Pet Specialist</small></div>
+    </div>
+    <div class="doctor">
+      <img src="https://randomuser.me/api/portraits/women/65.jpg" alt="Leslie Alexander">
+      <div><strong>Leslie Alexander</strong><small>Surgeon</small></div>
+    </div>
+    <div class="doctor">
+      <img src="https://randomuser.me/api/portraits/men/55.jpg" alt="Alexander Leslie">
+      <div><strong>Alexander Leslie</strong><small>Cardiologist</small></div>
+    </div>
+    <div class="doctor">
+      <img src="https://randomuser.me/api/portraits/women/61.jpg" alt="Cody Fisher">
+      <div><strong>Cody Fisher</strong><small>Surgeon</small></div>
+    </div>
+  </section>
+
+  <section class="consultation">
+    <h2>Get A Free Consultation</h2>
+    <p>Drop us a line! We are here to answer your questions 24/7</p>
+    <input type="text" placeholder="Your Name*">
+    <input type="email" placeholder="Your Email*">
+    <input type="text" placeholder="Your Company*">
+    <button>Free Consultancy</button>
+  </section>
+
+  <footer>
+    <div>
+      <h3>🩺 Medically</h3>
+      <p>Mattis inelit neque quis donec eleifend amet. Amet sed et cursus eu euismod. Egestas in morbi tristique.</p>
+      <div class="social-icons">
+        <i class="fab fa-facebook"></i>
+        <i class="fab fa-x-twitter"></i>
+        <i class="fab fa-linkedin"></i>
+        <i class="fab fa-instagram"></i>
+      </div>
+    </div>
+    <div>
+      <h4>Quick Links</h4>
+      <p>Home<br>About Us<br>Services<br>Latest News<br>Team</p>
+    </div>
+    <div>
+      <h4>Useful Links</h4>
+      <p>Projects<br>Shop<br>Cart<br>Contact Us<br>FAQ</p>
+    </div>
+    <div>
+      <h4>Contact Us</h4>
+      <p>Email: medically@gmail.com<br>Phone: (704) 555-0127<br>Alt: (208) 555-0112<br>Address: 4517 Washington Ave., Manchter, Kentucky 495</p>
+    </div>
+  </footer>
+</body>
+</html>

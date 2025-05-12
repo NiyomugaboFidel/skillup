@@ -1,0 +1,1 @@
+ const citizens =mongoose.model('');
