@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %} 
+{% block title %}{{ post.user.username }}'s Post | ChatApp{% endblock %}
+
+{% block content %}
+<div class="border-b twitter-border">
+    <div class="p-4 border-b twitter-border">
+        <h1 class="text-xl font-bold">Post</h1>
+    </div>
+    
+    <!-- Post details -->
+    <div class="p-4 border-b twitter-border">
+        <div class="flex items-start">
+            <img src="{{ post.user.profile.avatar.url }}" alt="{{ post.user.username }}" class="w-12 h-12 rounded-full mr-3">
+            <div class="flex-1">
+                <div class="flex items-center">
+                    <a href="{% url 'profile' username=post.user.username %}" class="font-bold hover:underline">
+                        {{ post.user.get_full_name|default:post.user.username }}
+                    </a>
+                    <span class="twitter-text-light ml-1">@{{ post.user.username }}</span>
+                </div>
+                <div class="mt-1 text-xl">
+                    {{ post.content }}
+                </div>
+                {% if post.image %}
+                    <div class="mt-2">
+                        <img src="{{ post.image.url }}" alt="Post image" class="rounded-lg max-w-full">
+                    </div>
+                {% endif %}
+                <div class="mt-4 twitter-text-light">
+                    {{ post.created_at|date:"g:i A · M d, Y" }}
+                </div>
+                
+                <!-- Stats -->
+                <div class="flex mt-4 border-t border-b twitter-border py-3">
+                    <div class="mr-4">
+                        <span class="font-bold">{{ post.retweet_count }}</span>
+                        <span class="twitter-text-light">Retweets</span>
+                    </div>
+                    <div>
+                        <span class="font-bold">{{ post.like_count }}</span>
+                        <span class="twitter-text-light">Votes</span>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex justify-between mt-3">
+                    <a href="#" class="flex items-center text-twitter-text-light hover:text-blue-400">
+                        <i class="far fa-comment"></i>
+                    </a>
+                    <a href="{% url 'retweet_post' pk=post.id %}" class="flex items-center text-twitter-text-light hover:text-green-400 
+                        {% if user in post.retweets.all %}text-green-400{% endif %}">
+                        <i class="fas fa-retweet"></i>
+                    </a>
+                    <a href="{% url 'like_post' pk=post.id %}" class="flex items-center text-twitter-text-light hover:text-red-400
+                        {% if user in post.likes.all %}text-red-400{% endif %}">
+                        <i class="{% if user in post.likes.all %}fas{% else %}far{% endif %} fa-heart"></i>
+                    </a>
+                    <a href="{% url 'start_thread' username=post.user.username %}" class="flex items-center text-twitter-text-light hover:text-blue-400">
+                        <i class="far fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Comment form -->
+    <div class="p-4 border-b twitter-border">
+        <form method="post" class="flex">
+            {% csrf_token %}
+            <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="w-10 h-10 rounded-full mr-3">
+            <div class="flex-1">
+                {% render_field comment_form.content class="w-full p-2 bg-transparent border border-gray-700 rounded-lg focus:outline-none focus:border-blue-400 text-white placeholder-gray-500" placeholder="Tweet your reply" rows="2" %}
+                <div class="flex justify-end mt-2">
+                    <button type="submit" class="twitter-blue hover:bg-blue-600 text-white font-bold py-1 px-4 rounded-full">
+                        Reply
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div>
+        {% for comment in comments %}
+            <div class="p-4 border-b twitter-border hover:bg-gray-900 transition duration-200">
+                <div class="flex items-start">
+                    <img src="{{ comment.user.profile.avatar.url }}" alt="{{ comment.user.username }}" class="w-10 h-10 rounded-full mr-3">
+                    <div>
+                        <div class="flex items-center">
+                            <a href="{% url 'profile' username=comment.user.username %}" class="font-bold hover:underline">
+                                {{ comment.user.get_full_name|default:comment.user.username }}
+                            </a>
+                            <span class="twitter-text-light ml-1">@{{ comment.user.username }}</span>
+                            <span class="twitter-text-light ml-1">·</span>
+                            <span class="twitter-text-light ml-1">{{ comment.created_at|timesince }}</span>
+                        </div>
+                        <div class="mt-1">
+                            {{ comment.content }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="p-8 text-center twitter-text-light">
+                <p>No comments yet. Be the first to comment!</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

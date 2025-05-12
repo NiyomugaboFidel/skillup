@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- Card container with shadow -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+      <!-- Header with gradient background -->
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4">
+        <h2 class="text-xl font-bold text-white">
+          {% if form.instance.pk %}Edit{% else %}Create{% endif %} Course
+        </h2>
+      </div>
+      
+      <!-- Form content -->
+      <div class="px-6 py-6">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% csrf_token %}
+
+          <div class="space-y-6">
+            {{ form|crispy }}
+          </div>
+          
+          <!-- Action buttons with hover effects -->
+          <div class="mt-8 flex items-center space-x-4">
+            <button 
+              type="submit" 
+              class="px-5 py-2 bg-blue-600 text-white font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
+              Save Course
+            </button>
+            <a 
+              href="{% url 'instructor_courses' %}" 
+              class="px-5 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Optional helper text -->
+    <p class="mt-4 text-center text-sm text-gray-600">
+      Fill in all required fields to create your course.
+    </p>
+  </div>
+</div>
+{% endblock %}

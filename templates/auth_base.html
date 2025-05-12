@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SkillUp Learning {% endblock %}</title>
+  <!-- CSS -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <link rel="shortcut icon" href="{% static 'images/logo.jpeg' %}" type="image/x-icon">
+  <!-- JavaScript -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    primary: '#00b102',
+                    'primary-dark': '#009001',
+                    'primary-light': '#e6f7e6'
+                }
+            }
+        }
+    }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.10.5/cdn.alpine.min.js" defer></script>
+
+  
+</head>
+<body class="bg-black text-white antialiased">
+    <div class="min-h-screen flex flex-col justify-center">
+        {% if messages %}
+            <div class="mb-4 max-w-md mx-auto">
+                {% for message in messages %}
+                    <div class="p-4 twitter-darker border-l-4 {% if message.tags == 'success' %}border-green-500{% elif message.tags == 'error' %}border-red-500{% else %}border-blue-500{% endif %} rounded-md">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

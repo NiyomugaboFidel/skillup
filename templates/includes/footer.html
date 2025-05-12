@@ -1,0 +1,92 @@
+{% load static %}
+<footer class="bg-gray-900 text-white py-16">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+            <!-- Column 1 -->
+            <div class="footer-column" data-aos="fade-up" data-aos-delay="100">
+                <h1 class="text-2xl font-bold mb-6 text-primary">SkillUp</h1>
+                <select class="bg-gray-800 text-white py-2 px-4 rounded w-full mb-4 focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option>English</option>
+                    <option>Spanish</option>
+                    <option>French</option>
+                    <option>German</option>
+                </select>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">
+                        <i class="fab fa-linkedin-in"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">
+                        <i class="fab fa-youtube"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Column 2 -->
+            <div class="footer-column" data-aos="fade-up" data-aos-delay="200">
+                <h3 class="font-bold mb-4 text-lg text-white">SkillUp</h3>
+                <ul class="space-y-2">
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">About Us</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Our Features</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Team</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Careers</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Course Catalog</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Premium Access</a></li>
+                </ul>
+            </div>
+            
+            <!-- Column 3 -->
+            <div class="footer-column" data-aos="fade-up" data-aos-delay="300">
+                <h3 class="font-bold mb-4 text-lg text-white">Community</h3>
+                <ul class="space-y-2">
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Students</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Instructors</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Developers</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Beta Program</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Forum</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Blog</a></li>
+                </ul>
+            </div>
+            
+            <!-- Column 4 - Hidden on small screens, visible on md and up -->
+            <div class="footer-column hidden md:block" data-aos="fade-up" data-aos-delay="400">
+                <h3 class="font-bold mb-4 text-lg text-white">Resources</h3>
+                <ul class="space-y-2">
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Documentation</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">API</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Terms</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Privacy</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Help Center</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-primary transition-colors duration-300">Contact</a></li>
+                </ul>
+            </div>
+            
+            <!-- Column 5 - Hidden on small screens, visible on lg and up -->
+            <div class="footer-column hidden lg:block" data-aos="fade-up" data-aos-delay="500">
+                <h3 class="font-bold mb-4 text-lg text-white">Mobile App</h3>
+                <div class="flex flex-col space-y-3">
+                    <a href="#" class="transition-transform duration-300 hover:scale-105">
+                        <img src="{% static 'images/app-store.png' %}" alt="Download on the App Store" class="h-10">
+                    </a>
+                    <a href="#" class="transition-transform duration-300 hover:scale-105">
+                        <img src="{% static 'images/google-play.png' %}" alt="Get it on Google Play" class="h-10">
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Footer -->
+        <div class="border-t border-gray-800 mt-12 pt-6 text-center text-sm text-gray-500">
+            <p>&copy; {% now "Y" %} SkillUp. All rights reserved.</p>
+            <p class="mt-2">Made with <span class="text-primary">❤️</span> for learners worldwide.</p>
+        </div>
+    </div>
+</footer>
